@@ -17,7 +17,6 @@ def data_demografi():
 
 @app.route("/api/usia", methods=["GET"])
 def data_usia():
-    data = {}
     # Menghitung jumlah kategori pada setiap tahun
     dc1_count = dc1.groupby([dc1['waktu_registrasi'].dt.year, 'kategori_usia']).size().unstack(fill_value=0).reset_index()
 
@@ -28,6 +27,7 @@ def data_usia():
         "kategori": total_kategori,
         "bytahun": dict(zip(dc1_count['waktu_registrasi'], dc1_count.set_index('waktu_registrasi').to_dict(orient='index').values()))
     }
+    return data
 
 @app.route("/api/jeniskelamin", methods=["GET"])
 def data_jeniskelamin():
