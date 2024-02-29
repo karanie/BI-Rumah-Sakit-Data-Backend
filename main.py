@@ -6,7 +6,7 @@ from tools import read_dataset_pickle
 app = Flask(__name__)
 CORS(app)
 
-dc1 = read_dataset_pickle(["dataset/DC"])[0]
+dc1 = read_dataset_pickle(["dataset/DC1"])[0]
 
 @app.route("/api/demografi", methods=["GET"])
 def data_demografi():
@@ -28,4 +28,10 @@ def data_usia():
         "kategori": total_kategori,
         "bytahun": dict(zip(dc1_count['waktu_registrasi'], dc1_count.set_index('waktu_registrasi').to_dict(orient='index').values()))
     }
+
+@app.route("/api/jeniskelamin", methods=["GET"])
+def data_jeniskelamin():
+    data = {}
+    data["index"] = dc1["jenis_kelamin"].value_counts().index.values.tolist()
+    data["values"] = dc1["jenis_kelamin"].value_counts().values.tolist()
     return data
