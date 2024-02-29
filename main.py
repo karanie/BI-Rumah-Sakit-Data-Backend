@@ -14,3 +14,10 @@ def data_demografi():
     data["index"] = dc1["kabupaten"].value_counts().index.values.tolist()
     data["values"] = dc1["kabupaten"].value_counts().values.tolist()
     return data
+
+@app.route("/api/jeniskelamin", methods=["GET"])
+def data_jeniskelamin():
+    data = {}
+    data["index"] = dc1["jenis_kelamin"].value_counts().index.values.tolist()
+    data["values"] = dc1["jenis_kelamin"].value_counts().values.tolist()
+    return data
