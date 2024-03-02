@@ -2,6 +2,7 @@ import json
 from flask import Flask, jsonify
 from flask_cors import CORS
 from tools import read_dataset_pickle
+from preprocess import preprocess_dataset
 
 app = Flask(__name__)
 CORS(app)
