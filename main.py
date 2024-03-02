@@ -35,3 +35,22 @@ def data_jeniskelamin():
     data["index"] = dc1["jenis_kelamin"].value_counts().index.values.tolist()
     data["values"] = dc1["jenis_kelamin"].value_counts().values.tolist()
     return data
+
+@app.route("/api/penjamin", methods=["GET"])
+def data_jenispenjamin():
+    data = {}
+    data["index"] = dc1["jenis_penjamin"].value_counts().index.values.tolist()
+    data["values"] = dc1["jenis_penjamin"].value_counts().values.tolist()
+    return data
+
+@app.route("/api/instansi", methods=["GET"])
+def data_instansi():
+    # Menghapus data dengan nama_instansi_utama bernama BPJS Kesehatan
+    filtered_data = dc1[dc1["nama_instansi_utama"] != "BPJS Kesehatan"]
+
+    # Menghitung ulang value_counts setelah data di-filter
+    data = {}
+    data["index"] = filtered_data["nama_instansi_utama"].value_counts().index.values.tolist()
+    data["values"] = filtered_data["nama_instansi_utama"].value_counts().values.tolist()
+
+    return data
