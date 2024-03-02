@@ -7,6 +7,7 @@ app = Flask(__name__)
 CORS(app)
 
 dc1 = read_dataset_pickle(["dataset/DC1"])[0]
+dc1 = preprocess_dataset(dc1)
 
 @app.route("/api/demografi", methods=["GET"])
 def data_demografi():
