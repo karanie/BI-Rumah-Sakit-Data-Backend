@@ -1,11 +1,11 @@
 import pandas as pd
 
-def filterInYear(df, column, year):
+def filter_in_year(df, column, year):
     return df.loc[df[column].dt.year == year]
 
-def filterInMonth(df, column, month):
+def filter_in_month(df, column, month):
     return df.loc[df[column].dt.month == month]
 
-def filterInYearMonth(df, column, year, month):
+def filter_in_year_month(df, column, year, month):
     return df.loc[(df[column].dt.year == year)
               & (df[column].dt.month == month)]
