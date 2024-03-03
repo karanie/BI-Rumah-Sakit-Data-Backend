@@ -8,6 +8,7 @@ def convert_kabupaten_name(df):
     df.loc[df["kabupaten"] == "KABUPATEN S I A K", "kabupaten"] = "KABUPATEN SIAK"
     df.loc[df["kabupaten"] == "KOTA B A T A M", "kabupaten"] = "KABUPATEN BATAM"
     df.loc[df["kabupaten"] == "KOTA D U M A I", "kabupaten"] = "KOTA DUMAI"
+    df["kabupaten"] = df["kabupaten"].replace("^KABUPATEN", "KAB.", regex=True)
     return df
 
 def convert_kabupaten_casing(df):
