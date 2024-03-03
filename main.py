@@ -1,8 +1,10 @@
 import json
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
+import pandas as pd
 from tools import read_dataset_pickle
 from preprocess import preprocess_dataset
+from filterdf import filter_in_year
 
 app = Flask(__name__)
 CORS(app)
@@ -13,8 +15,30 @@ dc1 = preprocess_dataset(dc1)
 @app.route("/api/demografi", methods=["GET"])
 def data_demografi():
     data = {}
-    data["index"] = dc1["kabupaten"].value_counts().index.values.tolist()
-    data["values"] = dc1["kabupaten"].value_counts().values.tolist()
+    tipe_data = request.args.get("tipe_data")
+
+    if tipe_data is None:
+        data["index"] = dc1["kabupaten"].value_counts().index.values.tolist()
+        data["values"] = dc1["kabupaten"].value_counts().values.tolist()
+        return data
+    elif tipe_data == "timeseries":
+        temp_df = dc1[["waktu_registrasi", "kabupaten"]]
+        temp_df = filter_in_year(temp_df, "waktu_registrasi", 2021)
+
+        # Pick top 10
+        temp_df = temp_df[["kabupaten", "waktu_registrasi"]]
+        temp_df["kabupaten_filtered"] = temp_df["kabupaten"]
+        temp_df.loc[~temp_df["kabupaten_filtered"].isin(temp_df["kabupaten"].value_counts()[:10].index), "kabupaten_filtered"] = "Lainnya"
+        temp_df = temp_df.drop(columns="kabupaten")
+
+        temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["kabupaten_filtered"])
+        temp_df = temp_df.resample("W").sum()
+
+        data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
+        data["columns"] = temp_df.columns.tolist()
+        data["values"] = temp_df.values.transpose().tolist()
+        return data
+
     return data
 
 @app.route("/api/usia", methods=["GET"])
