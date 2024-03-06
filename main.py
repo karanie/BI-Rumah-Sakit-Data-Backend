@@ -58,8 +58,21 @@ def data_usia():
 @app.route("/api/jeniskelamin", methods=["GET"])
 def data_jeniskelamin():
     data = {}
-    data["index"] = dc1["jenis_kelamin"].value_counts().index.values.tolist()
-    data["values"] = dc1["jenis_kelamin"].value_counts().values.tolist()
+    tipe_data = request.args.get("tipe_data")
+
+    if tipe_data is None:
+        data["index"] = dc1["jenis_kelamin"].value_counts().sort_index().index.values.tolist()
+        data["values"] = dc1["jenis_kelamin"].value_counts().sort_index().values.tolist()
+        return data
+    elif tipe_data == "timeseries":
+        temp_df = dc1[["waktu_registrasi", "jenis_kelamin"]]
+        temp_df = dc1.groupby([dc1['waktu_registrasi'].dt.year, 'jenis_kelamin']).size().unstack(fill_value=0)
+
+        data["index"] = temp_df.index.tolist()
+        data["columns"] = temp_df.columns.tolist()
+        data["values"] = temp_df.values.transpose().tolist()
+        return data
+
     return data
 
 @app.route("/api/penjamin", methods=["GET"])
