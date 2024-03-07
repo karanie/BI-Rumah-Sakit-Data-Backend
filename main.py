@@ -4,7 +4,7 @@ from flask_cors import CORS
 import pandas as pd
 from tools import read_dataset_pickle
 from preprocess import preprocess_dataset
-from filterdf import filter_in_year
+from filterdf import filter_in_year, filter_in_year_month
 
 app = Flask(__name__)
 CORS(app)
@@ -16,14 +16,25 @@ dc1 = preprocess_dataset(dc1)
 def data_demografi():
     data = {}
     tipe_data = request.args.get("tipe_data")
+    tahun = request.args.get("tahun", type=int)
+    bulan = request.args.get("bulan", type=int)
+
+    temp_df = dc1
+    if tahun is not None and bulan is not None:
+        temp_df = filter_in_year_month(temp_df, "waktu_registrasi", tahun, bulan)
+    if tahun is not None:
+        temp_df = filter_in_year(temp_df, "waktu_registrasi", tahun)
 
     if tipe_data is None:
-        data["index"] = dc1["kabupaten"].value_counts().index.values.tolist()
-        data["values"] = dc1["kabupaten"].value_counts().values.tolist()
+        data["index"] = temp_df["kabupaten"].value_counts().index.values.tolist()
+        data["values"] = temp_df["kabupaten"].value_counts().values.tolist()
         return data
     elif tipe_data == "timeseries":
-        temp_df = dc1[["waktu_registrasi", "kabupaten"]]
-        temp_df = filter_in_year(temp_df, "waktu_registrasi", 2021)
+        if tahun is None and bulan is None:
+            temp_df = dc1[["waktu_registrasi", "kabupaten"]]
+            temp_df = filter_in_year(temp_df, "waktu_registrasi", 2021)
+        else:
+            temp_df = temp_df[["waktu_registrasi", "kabupaten"]]
 
         # Pick top 10
         temp_df = temp_df[["kabupaten", "waktu_registrasi"]]
@@ -32,7 +43,8 @@ def data_demografi():
         temp_df = temp_df.drop(columns="kabupaten")
 
         temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["kabupaten_filtered"])
-        temp_df = temp_df.resample("W").sum()
+        resample_option = "D" if bulan is not None else "W"
+        temp_df = temp_df.resample(resample_option).sum()
 
         data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
         data["columns"] = temp_df.columns.tolist()
@@ -92,4 +104,12 @@ def data_instansi():
     data["index"] = filtered_data["nama_instansi_utama"].value_counts().index.values.tolist()
     data["values"] = filtered_data["nama_instansi_utama"].value_counts().values.tolist()
 
+    return data
+
+@app.route("/api/filter-options", methods=["GET"])
+def data_filter_options():
+    data = {}
+    data["kabupaten"] = sorted(dc1["kabupaten"].unique().tolist())
+    data["tahun"] = sorted(dc1["waktu_registrasi"].dt.year.unique().tolist())
+    data["bulan"] = sorted(dc1["waktu_registrasi"].dt.month.unique().tolist())
     return data
