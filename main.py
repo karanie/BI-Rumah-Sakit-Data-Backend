@@ -43,14 +43,29 @@ def data_demografi():
 
 @app.route("/api/usia", methods=["GET"])
 def data_usia():
-    # Menghitung jumlah kategori pada setiap tahun
-    dc1_count = dc1.groupby([dc1['waktu_registrasi'].dt.year, 'kategori_usia']).size().unstack(fill_value=0).reset_index()
 
-    # Menghitung jumlah kategori secara keseluruhan
-    total_kategori = dc1['kategori_usia'].value_counts().to_dict()
+    jml_pasien = dc1['id_pasien'].nunique()
+
+    #jumlah pasien tahunan
+    # Mencari waktu registrasi paling awal untuk setiap id_pasien
+    df_paling_awal = dc1.loc[dc1.groupby('id_pasien')['waktu_registrasi'].idxmin()]
+
+    # Ekstrak tahun dari kolom waktu registrasi
+    df_paling_awal['tahun'] = df_paling_awal['waktu_registrasi'].dt.year
+
+    # Hitung jumlah pasien unik untuk setiap tahun
+    jumlah_pasien_tahunan = df_paling_awal.groupby('tahun')['id_pasien'].nunique()
+
+    # Kelompokkan berdasarkan kelompok usia dan hitung jumlahnya
+    jumlah_kelompok_usia = df_paling_awal.groupby('kategori_usia').size()
+
+    # Menghitung jumlah kategori pada setiap tahun
+    dc1_count = df_paling_awal.groupby([df_paling_awal['waktu_registrasi'].dt.year, 'kategori_usia']).size().unstack(fill_value=0).reset_index()
 
     data = {
-        "kategori": total_kategori,
+        "jumlah_pasien":jml_pasien,
+        "jumlah_pasien_tahunan": jumlah_pasien_tahunan.to_dict(),
+        "kategori": jumlah_kelompok_usia.to_dict(),
         "bytahun": dict(zip(dc1_count['waktu_registrasi'], dc1_count.set_index('waktu_registrasi').to_dict(orient='index').values()))
     }
     return data
