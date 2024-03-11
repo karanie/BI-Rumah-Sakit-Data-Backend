@@ -1,4 +1,5 @@
 import json
+import os.path, time
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import pandas as pd
@@ -119,6 +120,14 @@ def data_instansi():
     data["index"] = filtered_data["nama_instansi_utama"].value_counts().index.values.tolist()
     data["values"] = filtered_data["nama_instansi_utama"].value_counts().values.tolist()
 
+    return data
+
+@app.route("/api/last-update", methods=["GET"])
+def last_update():
+    data = {}
+    data["mtime"] = os.path.getmtime("dataset/DC1.pkl.gz")
+    data["mtimeLocaltime"] = time.ctime(os.path.getmtime("dataset/DC1.pkl.gz"))
+    data["waktuRegistrasiTerakhir"] = dc1.iloc[-1]["waktu_registrasi"]
     return data
 
 @app.route("/api/filter-options", methods=["GET"])
