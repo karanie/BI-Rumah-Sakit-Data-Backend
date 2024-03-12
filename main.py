@@ -87,14 +87,25 @@ def data_usia():
 def data_jeniskelamin():
     data = {}
     tipe_data = request.args.get("tipe_data")
+    bulan = request.args.get("bulan", type=int)
+    tahun = request.args.get("tahun", type=int)
+    kabupaten = request.args.get("kabupaten", type=str)
+    temp_df = dc1
+
+    if kabupaten is not None:
+        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
+    if tahun is not None:
+        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
+    if tahun is not None and bulan is not None:
+        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
 
     if tipe_data is None:
-        data["index"] = dc1["jenis_kelamin"].value_counts().sort_index().index.values.tolist()
-        data["values"] = dc1["jenis_kelamin"].value_counts().sort_index().values.tolist()
+        data["index"] = temp_df["jenis_kelamin"].value_counts().sort_index().index.values.tolist()
+        data["values"] = temp_df["jenis_kelamin"].value_counts().sort_index().values.tolist()
         return data
     elif tipe_data == "timeseries":
-        temp_df = dc1[["waktu_registrasi", "jenis_kelamin"]]
-        temp_df = dc1.groupby([dc1['waktu_registrasi'].dt.year, 'jenis_kelamin']).size().unstack(fill_value=0)
+        temp_df = temp_df[["waktu_registrasi", "jenis_kelamin"]]
+        temp_df = temp_df.groupby([temp_df['waktu_registrasi'].dt.year, 'jenis_kelamin']).size().unstack(fill_value=0)
 
         data["index"] = temp_df.index.tolist()
         data["columns"] = temp_df.columns.tolist()
