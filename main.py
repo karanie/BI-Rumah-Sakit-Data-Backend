@@ -2,12 +2,17 @@ import json
 import os.path, time
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from werkzeug.utils import secure_filename
 import pandas as pd
 from tools import read_dataset_pickle
 from preprocess import preprocess_dataset
 from filterdf import filter_in_year, filter_in_year_month
 
+ALLOWED_EXTENSIONS = { "csv", "xlsx" }
+UPLOAD_FOLDER = "dataset/"
+
 app = Flask(__name__)
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 CORS(app)
 
 dc1 = read_dataset_pickle(["dataset/DC1"])[0]
@@ -172,3 +177,23 @@ def data_filter_options():
     data["tahun"] = sorted(dc1["waktu_registrasi"].dt.year.unique().tolist())
     data["bulan"] = sorted(dc1["waktu_registrasi"].dt.month.unique().tolist())
     return data
+
+@app.route("/api/update-dataset", methods=["POST"])
+def update_dataset():
+    if "dataset" not in request.files:
+        return "No dataset file"
+    dataset_file = request.files["dataset"]
+    if dataset_file.filename == "":
+        return "No dataset file"
+    if dataset_file and dataset_file.filename.rsplit('.', 1)[1].lower() not in ALLOWED_EXTENSIONS:
+        return "File extension not supported"
+
+    filename = secure_filename(dataset_file.filename)
+    dataset_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+    # TODO: Provide a way to update the dataset. Either replace the whole
+    # dataset file or append the current dataset with the user submitted dataset
+    # file. Another way is to provide API which save single or some rows of data
+    # and append it to the current dataset.
+
+    return {}
