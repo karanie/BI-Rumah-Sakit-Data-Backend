@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 def convert_kabupaten_na(df):
     df["kabupaten"] = df["kabupaten"].fillna("Tidak diketahui")
@@ -15,11 +16,16 @@ def convert_kabupaten_casing(df):
     df["kabupaten"] = df["kabupaten"].str.title()
     return df
 
+def drop_gender_ambigu(df):
+    df.loc[df["jenis_kelamin"] == "Ambigu", "jenis_kelamin"] = np.NaN
+    return df
+
 def preprocess_dataset(df):
     func_list = [
             convert_kabupaten_na,
             convert_kabupaten_name,
             convert_kabupaten_casing,
+            drop_gender_ambigu
             ]
 
     for f in func_list:
