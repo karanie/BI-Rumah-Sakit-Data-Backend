@@ -4,7 +4,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import pandas as pd
-from tools import read_dataset_pickle
+from tools import read_dataset_pickle, save_dataset_as_pickle
 from preprocess import preprocess_dataset
 from filterdf import filter_in_year, filter_in_year_month
 
@@ -180,20 +180,45 @@ def data_filter_options():
 
 @app.route("/api/update-dataset", methods=["POST"])
 def update_dataset():
-    if "dataset" not in request.files:
-        return "No dataset file"
-    dataset_file = request.files["dataset"]
-    if dataset_file.filename == "":
-        return "No dataset file"
-    if dataset_file and dataset_file.filename.rsplit('.', 1)[1].lower() not in ALLOWED_EXTENSIONS:
-        return "File extension not supported"
+    global dc1
+    method = request.args.get("method", type=str)
 
-    filename = secure_filename(dataset_file.filename)
-    dataset_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    if method == "concatdf":
+        if "dataset" not in request.files:
+            return "No dataset file"
+        dataset_file = request.files["dataset"]
+        if dataset_file.filename == "":
+            return "No dataset file"
+        if dataset_file and dataset_file.filename.rsplit('.', 1)[1].lower() not in ALLOWED_EXTENSIONS:
+            return "File extension not supported"
 
-    # TODO: Provide a way to update the dataset. Either replace the whole
-    # dataset file or append the current dataset with the user submitted dataset
-    # file. Another way is to provide API which save single or some rows of data
-    # and append it to the current dataset.
+        filename = secure_filename(dataset_file.filename)
+        dataset_file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        dataset_file.save(dataset_file_path)
 
-    return {}
+        preprocess_time_start = time.time()
+        df_new = preprocess_dataset(pd.read_csv(dataset_file_path))
+        preprocess_time_end = time.time()
+
+        concat_time_start = time.time()
+        #df = pd.concat([dc1, df_new]).reset_index().drop(columns=["index"])
+        df = pd.concat([dc1, df_new], ignore_index=True)
+        concat_time_end = time.time()
+
+        save_time_start = time.time()
+        # Compressing the pickle file with gzip takes around ~85 seconds on
+        # my computer. This may be a concern if you want faster dataset update
+        save_dataset_as_pickle(df, "dataset/DC1")
+        save_time_end = time.time()
+
+        dc1 = df
+        return {
+                "status": "Updated",
+                "preprocess_time": preprocess_time_end - preprocess_time_start,
+                "concat_time": concat_time_end - concat_time_start,
+                "save_time": save_time_end - save_time_start,
+                }
+
+    return {
+            "status": "Unsupported method"
+            }
