@@ -15,6 +15,9 @@ def read_dataset_pickle(files, save_as_pickle=True):
         else:
             out.append(pd.read_excel(i + ".xlsx"))
             if (save_as_pickle):
-                with gzip.open(i + ".pkl.gz", "wb") as f:
-                    pickle.dump(out[len(out) - 1], f)
+                save_dataset_as_pickle(out[len(out) - 1], i)
     return out
+
+def save_dataset_as_pickle(df, filename):
+    with gzip.open(filename + ".pkl.gz", "wb") as f:
+        pickle.dump(df, f)
