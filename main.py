@@ -124,7 +124,7 @@ def data_jenispenjamin():
 @app.route("/api/instansi", methods=["GET"])
 def data_instansi():
     # Menghapus data dengan nama_instansi_utama bernama BPJS Kesehatan
-    filtered_data = dc1[dc1["nama_instansi_utama"] != "BPJS Kesehatan"]
+    filtered_data = dc1[dc1["jenis_penjamin"] == "Perusahaan"]
 
     # Menghitung ulang value_counts setelah data di-filter
     data = {}
