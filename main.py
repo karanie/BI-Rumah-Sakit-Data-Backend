@@ -117,8 +117,20 @@ def data_jeniskelamin():
 @app.route("/api/penjamin", methods=["GET"])
 def data_jenispenjamin():
     data = {}
-    data["index"] = dc1["jenis_penjamin"].value_counts().index.values.tolist()
-    data["values"] = dc1["jenis_penjamin"].value_counts().values.tolist()
+    bulan = request.args.get("bulan", type=int)
+    tahun = request.args.get("tahun", type=int)
+    kabupaten = request.args.get("kabupaten", type=str)
+    temp_df = dc1
+
+    if kabupaten is not None:
+        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
+    if tahun is not None:
+        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
+    if tahun is not None and bulan is not None:
+        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
+
+    data["index"] = temp_df["jenis_penjamin"].value_counts().index.values.tolist()
+    data["values"] = temp_df["jenis_penjamin"].value_counts().values.tolist()
     return data
 
 @app.route("/api/instansi", methods=["GET"])
@@ -128,8 +140,20 @@ def data_instansi():
 
     # Menghitung ulang value_counts setelah data di-filter
     data = {}
-    data["index"] = filtered_data["nama_instansi_utama"].value_counts().index.values.tolist()
-    data["values"] = filtered_data["nama_instansi_utama"].value_counts().values.tolist()
+    bulan = request.args.get("bulan", type=int)
+    tahun = request.args.get("tahun", type=int)
+    kabupaten = request.args.get("kabupaten", type=str)
+    temp_df = filtered_data
+
+    if kabupaten is not None:
+        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
+    if tahun is not None:
+        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
+    if tahun is not None and bulan is not None:
+        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
+
+    data["index"] = temp_df["nama_instansi_utama"].value_counts().index.values.tolist()
+    data["values"] = temp_df["nama_instansi_utama"].value_counts().values.tolist()
 
     return data
 
