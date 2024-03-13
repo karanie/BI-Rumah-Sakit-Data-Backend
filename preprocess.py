@@ -20,12 +20,17 @@ def drop_gender_ambigu(df):
     df.loc[df["jenis_kelamin"] == "Ambigu", "jenis_kelamin"] = np.NaN
     return df
 
+def convert_waktu_registrasi_to_datetime(df):
+    df["waktu_registrasi"] = pd.to_datetime(df["waktu_registrasi"])
+    return df
+
 def preprocess_dataset(df):
     func_list = [
             convert_kabupaten_na,
             convert_kabupaten_name,
             convert_kabupaten_casing,
-            drop_gender_ambigu
+            drop_gender_ambigu,
+            convert_waktu_registrasi_to_datetime,
             ]
 
     for f in func_list:
