@@ -18,6 +18,36 @@ CORS(app)
 dc1 = read_dataset_pickle(["dataset/DC1"])[0]
 dc1 = preprocess_dataset(dc1)
 
+@app.route("/api/dashboard", methods=["GET"])
+def data_dashboard():
+    data = {}
+    bulan = request.args.get("bulan", type=int)
+    tahun = request.args.get("tahun", type=int)
+    kabupaten = request.args.get("kabupaten", type=str)
+    temp_df = dc1
+
+    if kabupaten is not None:
+        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
+    if tahun is not None:
+        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
+    if tahun is not None and bulan is not None:
+        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
+
+    jml_pasien = temp_df['id_pasien'].nunique()
+    jml_kunjungan = temp_df['no_registrasi'].nunique()
+
+    # Jumlah pasien tiap tahun
+    df_paling_awal = dc1.loc[dc1.groupby('id_pasien')['waktu_registrasi'].idxmin()]
+    df_paling_awal['tahun'] = df_paling_awal['waktu_registrasi'].dt.year
+    jumlah_pasien_tahunan = df_paling_awal.groupby('tahun')['id_pasien'].nunique()
+
+    data = {
+        "jumlahPasien": jml_pasien,
+        "jumlahKunjungan": jml_kunjungan,
+        "jumlahPasienTahunan": jumlah_pasien_tahunan.to_dict(),
+    }
+    return data
+
 @app.route("/api/demografi", methods=["GET"])
 def data_demografi():
     data = {}
@@ -222,32 +252,3 @@ def update_dataset():
     return {
             "status": "Unsupported method"
             }
-
-@app.route("/api/dashboard", methods=["GET"])
-def data_dashboard():
-
-    data = {}
-    bulan = request.args.get("bulan", type=int)
-    tahun = request.args.get("tahun", type=int)
-    kabupaten = request.args.get("kabupaten", type=str)
-    temp_df = dc1
-
-    if kabupaten is not None:
-        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
-    if tahun is not None:
-        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
-    if tahun is not None and bulan is not None:
-        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
-
-    jml_pasien = temp_df['id_pasien'].nunique()
-    jml_kunjungan = temp_df['no_registrasi'].nunique()
-    # jml_pendapatan = dc1['']
-
-    data = {
-        "jumlah_pasien":jml_pasien,
-        "jumlah_kunjungan":jml_kunjungan,
-
-        
-    }
-    return data
-
