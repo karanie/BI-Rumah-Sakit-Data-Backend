@@ -222,3 +222,32 @@ def update_dataset():
     return {
             "status": "Unsupported method"
             }
+
+@app.route("/api/dashboard", methods=["GET"])
+def data_dashboard():
+
+    data = {}
+    bulan = request.args.get("bulan", type=int)
+    tahun = request.args.get("tahun", type=int)
+    kabupaten = request.args.get("kabupaten", type=str)
+    temp_df = dc1
+
+    if kabupaten is not None:
+        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
+    if tahun is not None:
+        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
+    if tahun is not None and bulan is not None:
+        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
+
+    jml_pasien = temp_df['id_pasien'].nunique()
+    jml_kunjungan = temp_df['no_registrasi'].nunique()
+    # jml_pendapatan = dc1['']
+
+    data = {
+        "jumlah_pasien":jml_pasien,
+        "jumlah_kunjungan":jml_kunjungan,
+
+        
+    }
+    return data
+
