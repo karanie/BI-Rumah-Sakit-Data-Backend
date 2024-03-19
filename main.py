@@ -201,6 +201,25 @@ def data_instansi():
 
     return data
 
+@app.route("/api/pekerjaan", methods=["GET"])
+def data_pekerjaan():
+    data = {}
+    bulan = request.args.get("bulan", type=int)
+    tahun = request.args.get("tahun", type=int)
+    kabupaten = request.args.get("kabupaten", type=str)
+    temp_df = dc1
+
+    if kabupaten is not None:
+        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
+    if tahun is not None:
+        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
+    if tahun is not None and bulan is not None:
+        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
+
+    data["index"] = temp_df["pekerjaan"].value_counts().index.values.tolist()
+    data["values"] = temp_df["pekerjaan"].value_counts().values.tolist()
+    return data
+
 @app.route("/api/last-update", methods=["GET"])
 def last_update():
     data = {}
