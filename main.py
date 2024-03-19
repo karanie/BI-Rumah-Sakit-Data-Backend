@@ -139,10 +139,19 @@ def data_jeniskelamin():
         data["values"] = temp_df["jenis_kelamin"].value_counts().sort_index().values.tolist()
         return data
     elif tipe_data == "timeseries":
-        temp_df = temp_df[["waktu_registrasi", "jenis_kelamin"]]
-        temp_df = temp_df.groupby([temp_df['waktu_registrasi'].dt.year, 'jenis_kelamin']).size().unstack(fill_value=0)
+        if tahun is None and bulan is None:
+            temp_df = temp_df[["waktu_registrasi", "jenis_kelamin"]]
+            # temp_df = temp_df.groupby([temp_df['waktu_registrasi'].dt.month, 'jenis_kelamin']).size().unstack(fill_value=0)
+            temp_df = filter_in_year(temp_df, "waktu_registrasi", 2021)
+        else:
+            temp_df = temp_df[["waktu_registrasi", "jenis_kelamin"]]
 
-        data["index"] = temp_df.index.tolist()
+
+        temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["jenis_kelamin"])
+        resample_option = "D" if bulan is not None else "W"
+        temp_df = temp_df.resample(resample_option).sum()
+
+        data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
         data["columns"] = temp_df.columns.tolist()
         data["values"] = temp_df.values.transpose().tolist()
         return data
