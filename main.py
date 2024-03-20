@@ -51,6 +51,74 @@ def data_dashboard():
     }
     return data
 
+@app.route("/api/jenis_registrasi", methods=["GET"])
+def data_jenisRegistrasi():
+    data = {}
+    tahun = request.args.get("tahun", type=int)
+    bulan = request.args.get("bulan", type=int)
+    kabupaten = request.args.get("kabupaten", type=str)
+
+    temp_df = dc1
+
+    if kabupaten is not None:
+        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
+    if tahun is not None:
+        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
+    if tahun is not None and bulan is not None:
+        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
+
+    if tahun is None and bulan is None:
+        resample_option = "Y"
+    elif tahun is not None and bulan is None:
+        resample_option = "M"
+    else:
+        resample_option = "D"
+
+    temp_df = temp_df[["waktu_registrasi","jenis_registrasi"]]
+    temp_df = pd.crosstab(temp_df["waktu_registrasi"],temp_df["jenis_registrasi"])
+    temp_df = temp_df.resample(resample_option).sum()
+
+    data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
+    data["columns"] = temp_df.columns.tolist()
+    data["values"] = temp_df.values.transpose().tolist()
+    return data
+
+
+@app.route("/api/kunjungan", methods=["GET"])
+def data_kunjungan():
+    data = {}
+    tahun = request.args.get("tahun", type=int)
+    bulan = request.args.get("bulan", type=int)
+    kabupaten = request.args.get("kabupaten", type=int)
+
+    temp_df = dc1
+
+    if kabupaten is not None:
+        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
+    if tahun is not None:
+        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
+    if tahun is not None and bulan is not None:
+        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
+
+
+    if tahun is None and bulan is None:
+        resample_option = "Y"
+    elif tahun is not None and bulan is None:
+        resample_option = "M"
+    else:
+        resample_option = "D"
+
+    temp_df = temp_df[["waktu_registrasi"]]
+    temp_df = temp_df.set_index("waktu_registrasi")
+    temp_df["Jumlah Kunjungan"] = 1
+    temp_df = temp_df.resample(resample_option).sum()
+
+    data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
+    data["columns"] = temp_df.columns.tolist()
+    data["values"] = temp_df.values.transpose().tolist()
+    return data
+
+
 @app.route("/api/demografi", methods=["GET"])
 def data_demografi():
     data = {}
@@ -143,15 +211,15 @@ def data_jeniskelamin():
         return data
     elif tipe_data == "timeseries":
         if tahun is None and bulan is None:
-            temp_df = temp_df[["waktu_registrasi", "jenis_kelamin"]]
             # temp_df = temp_df.groupby([temp_df['waktu_registrasi'].dt.month, 'jenis_kelamin']).size().unstack(fill_value=0)
-            temp_df = filter_in_year(temp_df, "waktu_registrasi", 2021)
+            resample_option = "Y"
+        elif tahun is not None and bulan is None:
+            resample_option = "M"
         else:
-            temp_df = temp_df[["waktu_registrasi", "jenis_kelamin"]]
+            resample_option = "D"
 
-
+        temp_df = temp_df[["waktu_registrasi", "jenis_kelamin"]]
         temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["jenis_kelamin"])
-        resample_option = "D" if bulan is not None else "W"
         temp_df = temp_df.resample(resample_option).sum()
 
         data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
