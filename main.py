@@ -39,12 +39,15 @@ def data_dashboard():
     # Jumlah pasien tiap tahun
     df_paling_awal = dc1.loc[dc1.groupby('id_pasien')['waktu_registrasi'].idxmin()]
     df_paling_awal['tahun'] = df_paling_awal['waktu_registrasi'].dt.year
+    temp_df['tahun'] = temp_df['waktu_registrasi'].dt.year
     jumlah_pasien_tahunan = df_paling_awal.groupby('tahun')['id_pasien'].nunique()
+    jumlah_kunjungan_tahunan = temp_df.groupby('tahun')['id_registrasi'].count()
 
     data = {
         "jumlahPasien": jml_pasien,
         "jumlahKunjungan": jml_kunjungan,
         "jumlahPasienTahunan": jumlah_pasien_tahunan.to_dict(),
+        "jumlahKunjunganTahunan": jumlah_kunjungan_tahunan.to_dict(),
     }
     return data
 
@@ -218,6 +221,28 @@ def data_pekerjaan():
 
     data["index"] = temp_df["pekerjaan"].value_counts().index.values.tolist()
     data["values"] = temp_df["pekerjaan"].value_counts().values.tolist()
+    return data
+
+@app.route("/api/gejala", methods=["GET"])
+def data_gejala():
+    data = {}
+    bulan = request.args.get("bulan", type=int)
+    tahun = request.args.get("tahun", type=int)
+    kabupaten = request.args.get("kabupaten", type=str)
+    jenis_registrasi = request.args.get("jenis_registrasi", type=str)
+    temp_df = dc1
+
+    if kabupaten is not None:
+        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
+    if jenis_registrasi is not None:
+        temp_df = temp_df[temp_df["jenis_registrasi"] == jenis_registrasi]
+    if tahun is not None:
+        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
+    if tahun is not None and bulan is not None:
+        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
+
+    data["index"] = temp_df["diagnosa_primer"].value_counts().index.values.tolist()
+    data["values"] = temp_df["diagnosa_primer"].value_counts().values.tolist()
     return data
 
 @app.route("/api/last-update", methods=["GET"])
