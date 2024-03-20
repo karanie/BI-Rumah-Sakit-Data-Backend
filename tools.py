@@ -18,6 +18,14 @@ def read_dataset_pickle(files, save_as_pickle=True):
                 save_dataset_as_pickle(out[len(out) - 1], i)
     return out
 
+def read_dataset(path):
+    ext = path.rsplit('.', 1)[1].lower()
+    read_map = {
+            "csv": pd.read_csv,
+            "xlsx": pd.read_excel,
+            }
+    return read_map[ext](path)
+
 def save_dataset_as_pickle(df, filename):
     with gzip.open(filename + ".pkl.gz", "wb") as f:
         pickle.dump(df, f)
