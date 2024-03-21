@@ -11,6 +11,7 @@ pandas = "*"
 numpy = "*"
 flask-cors = "*"
 colorama = "*"
+pgzip = "*"
 
 [dev-packages]
 

@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 import pickle
-import gzip
+import pgzip
 
 def read_dataset_pickle(files, save_as_pickle=True):
     out = []
@@ -9,7 +9,7 @@ def read_dataset_pickle(files, save_as_pickle=True):
         # Read the pickle file of the pandas dataframe if it exists.
         # This prevents a really long time file reading by pandas.
         if os.path.isfile(i + ".pkl.gz"):
-            with gzip.open(i + ".pkl.gz", "rb") as f:
+            with pgzip.open(i + ".pkl.gz", "rb", thread=0) as f:
                 out.append(pickle.load(f))
         # Otherwise, read the xlsx file and save it in pickle if save_as_pickle parameter is True.
         else:
@@ -27,5 +27,5 @@ def read_dataset(path):
     return read_map[ext](path)
 
 def save_dataset_as_pickle(df, filename):
-    with gzip.open(filename + ".pkl.gz", "wb") as f:
+    with pgzip.open(filename + ".pkl.gz", "wb", thread=0) as f:
         pickle.dump(df, f)
