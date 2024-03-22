@@ -4,7 +4,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import pandas as pd
-from tools import read_dataset_pickle, save_dataset_as_pickle
+from tools import read_dataset_pickle, save_dataset_as_pickle, read_dataset
 from preprocess import preprocess_dataset
 from filterdf import filter_in_year, filter_in_year_month
 
@@ -348,7 +348,7 @@ def update_dataset():
         dataset_file.save(dataset_file_path)
 
         preprocess_time_start = time.time()
-        df_new = preprocess_dataset(pd.read_csv(dataset_file_path))
+        df_new = preprocess_dataset(read_dataset(dataset_file_path))
         preprocess_time_end = time.time()
 
         concat_time_start = time.time()
