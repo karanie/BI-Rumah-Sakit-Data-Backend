@@ -24,6 +24,11 @@ def convert_waktu_registrasi_to_datetime(df):
     df["waktu_registrasi"] = pd.to_datetime(df["waktu_registrasi"])
     return df
 
+def convert_rujukan(df):
+    df.loc[df["rujukan"] == "Dalam", "rujukan"] = "Dalam RS"
+    df.loc[df["rujukan"] == "Luar", "rujukan"] = "Luar RS"
+    return df
+
 def preprocess_dataset(df):
     func_list = [
             convert_kabupaten_na,
@@ -31,6 +36,7 @@ def preprocess_dataset(df):
             convert_kabupaten_casing,
             drop_gender_ambigu,
             convert_waktu_registrasi_to_datetime,
+            convert_rujukan,
             ]
 
     for f in func_list:

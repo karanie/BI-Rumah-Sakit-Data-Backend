@@ -51,6 +51,40 @@ def data_dashboard():
     }
     return data
 
+@app.route("/api/rujukan", methods=["GET"])
+def data_rujukan():
+    data = {}
+    tahun = request.args.get("tahun", type=int)
+    bulan = request.args.get("bulan", type=int)
+    kabupaten = request.args.get("kabupaten", type=str)
+
+    temp_df = dc1
+
+    if kabupaten is not None:
+        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
+    if tahun is not None:
+        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
+    if tahun is not None and bulan is not None:
+        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
+
+    if tahun is None and bulan is None:
+        resample_option = "Y"
+    elif tahun is not None and bulan is None:
+        resample_option = "M"
+    else:
+        resample_option = "D"
+
+    temp_df = temp_df[["waktu_registrasi", "rujukan"]]
+    temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["rujukan"])
+    temp_df = temp_df.resample(resample_option).sum()
+
+    data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
+    data["columns"] = temp_df.columns.tolist()
+    data["values"] = temp_df.values.transpose().tolist()
+    
+    return data
+
+
 @app.route("/api/jenis_registrasi", methods=["GET"])
 def data_jenisRegistrasi():
     data = {}
