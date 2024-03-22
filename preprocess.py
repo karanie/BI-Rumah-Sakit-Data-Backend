@@ -24,6 +24,9 @@ def convert_waktu_registrasi_to_datetime(df):
     df["waktu_registrasi"] = pd.to_datetime(df["waktu_registrasi"])
     return df
 
+def drop_duplicates(df):
+    return df.drop_duplicates()
+
 def preprocess_dataset(df):
     func_list = [
             convert_kabupaten_na,
@@ -31,6 +34,7 @@ def preprocess_dataset(df):
             convert_kabupaten_casing,
             drop_gender_ambigu,
             convert_waktu_registrasi_to_datetime,
+            drop_duplicates,
             ]
 
     for f in func_list:
