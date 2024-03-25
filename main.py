@@ -81,7 +81,7 @@ def data_rujukan():
     data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
     data["columns"] = temp_df.columns.tolist()
     data["values"] = temp_df.values.transpose().tolist()
-    
+
     return data
 
 
@@ -201,7 +201,12 @@ def data_usia():
 
     #jumlah pasien tahunan
     # Mencari waktu registrasi paling awal untuk setiap id_pasien
-    df_paling_awal = dc1.loc[dc1.groupby('id_pasien')['waktu_registrasi'].idxmin()]
+
+    # Filter Pasien Baru
+    df_paling_awal = dc1[dc1["fix_pasien_baru"] == "t"][["waktu_registrasi", "id_pasien", "kategori_usia"]]
+
+    # Filter Pasien ID yang Unique
+    # df_paling_awal = dc1.loc[dc1.groupby('id_pasien')['waktu_registrasi'].idxmin()]
 
     # Ekstrak tahun dari kolom waktu registrasi
     df_paling_awal['tahun'] = df_paling_awal['waktu_registrasi'].dt.year
@@ -239,6 +244,12 @@ def data_jeniskelamin():
     if tahun is not None and bulan is not None:
         temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
 
+    # Filter Pasien Baru Only
+    # temp_df = temp_df[temp_df["fix_pasien_baru"] == "t"][["waktu_registrasi", "jenis_kelamin"]]
+
+    # FIlter Pasien Unique
+    temp_df = temp_df.loc[temp_df.groupby(['id_pasien', 'jenis_kelamin']).head(1).index, ['id_pasien', 'jenis_kelamin',"waktu_registrasi"]]
+
     if tipe_data is None:
         data["index"] = temp_df["jenis_kelamin"].value_counts().sort_index().index.values.tolist()
         data["values"] = temp_df["jenis_kelamin"].value_counts().sort_index().values.tolist()
@@ -252,16 +263,14 @@ def data_jeniskelamin():
         else:
             resample_option = "D"
 
-        temp_df = temp_df[["waktu_registrasi", "jenis_kelamin"]]
-        temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["jenis_kelamin"])
-        temp_df = temp_df.resample(resample_option).sum()
+    temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["jenis_kelamin"])
+    temp_df = temp_df.resample(resample_option).sum()
 
-        data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
-        data["columns"] = temp_df.columns.tolist()
-        data["values"] = temp_df.values.transpose().tolist()
-        return data
-
+    data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
+    data["columns"] = temp_df.columns.tolist()
+    data["values"] = temp_df.values.transpose().tolist()
     return data
+
 
 @app.route("/api/penjamin", methods=["GET"])
 def data_jenispenjamin():
