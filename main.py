@@ -136,7 +136,7 @@ def data_kunjungan():
 
 
     if tahun is None and bulan is None:
-        resample_option = "Y"
+        resample_option = "YE"
     elif tahun is not None and bulan is None:
         resample_option = "M"
     else:
@@ -354,6 +354,10 @@ def data_gejala():
 
     data["index"] = temp_df["diagnosa_primer"].value_counts().index.values.tolist()
     data["values"] = temp_df["diagnosa_primer"].value_counts().values.tolist()
+
+    filtered_data = temp_df[temp_df["jenis_registrasi"] == "Rawat Jalan"]
+    data["indexPoliklinik"] = filtered_data["nama_departemen"].value_counts().index.values.tolist()
+    data["valuesPoliklinik"] = filtered_data["nama_departemen"].value_counts().values.tolist()
     return data
 
 @app.route("/api/last-update", methods=["GET"])
