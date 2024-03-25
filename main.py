@@ -203,10 +203,10 @@ def data_usia():
     # Mencari waktu registrasi paling awal untuk setiap id_pasien
 
     # Filter Pasien Baru
-    df_paling_awal = dc1[dc1["fix_pasien_baru"] == "t"][["waktu_registrasi", "id_pasien", "kategori_usia"]]
+    # df_paling_awal = dc1[dc1["fix_pasien_baru"] == "t"][["waktu_registrasi", "id_pasien", "kategori_usia"]]
 
     # Filter Pasien ID yang Unique
-    # df_paling_awal = dc1.loc[dc1.groupby('id_pasien')['waktu_registrasi'].idxmin()]
+    df_paling_awal = dc1.loc[dc1.groupby('id_pasien')['waktu_registrasi'].idxmin()]
 
     # Ekstrak tahun dari kolom waktu registrasi
     df_paling_awal['tahun'] = df_paling_awal['waktu_registrasi'].dt.year
