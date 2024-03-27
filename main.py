@@ -42,15 +42,11 @@ def data_dashboard():
     temp_df['tahun'] = temp_df['waktu_registrasi'].dt.year
     jumlah_pasien_tahunan = df_paling_awal.groupby('tahun')['id_pasien'].nunique()
     jumlah_kunjungan_tahunan = temp_df.groupby('tahun')['id_registrasi'].count()
-    jumlah_pendapatan_tahunan = temp_df["total_tagihan"].sum()
 
-    data = {
-        "jumlahPasien": jml_pasien,
-        "jumlahKunjungan": jml_kunjungan,
-        "jumlahPasienTahunan": jumlah_pasien_tahunan.to_dict(),
-        "jumlahKunjunganTahunan": jumlah_kunjungan_tahunan.to_dict(),
-        "jumlahPendapatanTahunan": float(jumlah_pendapatan_tahunan)
-    }
+    data["jumlahPasien"] = jml_pasien
+    data["jumlahKunjungan"] = jml_kunjungan
+    data["jumlahPasienTahunan"] = jumlah_pasien_tahunan.to_dict()
+    data["jumlahKunjunganTahunan"] = jumlah_kunjungan_tahunan.to_dict()
     data["pendapatan"] = temp_df['total_tagihan'].sum()
     data["pengeluaran"] = temp_df['total_semua_hpp'].sum()
     return data
