@@ -32,6 +32,12 @@ def convert_rujukan(df):
     df.loc[df["rujukan"] == "Luar", "rujukan"] = "Luar RS"
     return df
 
+def convert_gender_name(df):
+    df.loc[df["jenis_kelamin"] == "perempuan", "jenis_kelamin"] = "Perempuan"
+    df.loc[df["jenis_kelamin"] == "laki-laki", "jenis_kelamin"] = "Laki-laki"
+    return df
+
+
 def preprocess_dataset(df):
     func_list = [
             convert_kabupaten_na,
@@ -41,6 +47,7 @@ def preprocess_dataset(df):
             convert_waktu_registrasi_to_datetime,
             drop_duplicates,
             convert_rujukan,
+            convert_gender_name,
             ]
 
     for f in func_list:
