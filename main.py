@@ -51,6 +51,8 @@ def data_dashboard():
         "jumlahKunjunganTahunan": jumlah_kunjungan_tahunan.to_dict(),
         "jumlahPendapatanTahunan": float(jumlah_pendapatan_tahunan)
     }
+    data["pendapatan"] = temp_df['total_tagihan'].sum()
+    data["pengeluaran"] = temp_df['total_semua_hpp'].sum()
     return data
 
 @app.route("/api/rujukan", methods=["GET"])
@@ -382,13 +384,10 @@ def data_gejala():
     bulan = request.args.get("bulan", type=int)
     tahun = request.args.get("tahun", type=int)
     kabupaten = request.args.get("kabupaten", type=str)
-    jenis_registrasi = request.args.get("jenis_registrasi", type=str)
     temp_df = dc1
 
     if kabupaten is not None:
         temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
-    if jenis_registrasi is not None:
-        temp_df = temp_df[temp_df["jenis_registrasi"] == jenis_registrasi]
     if tahun is not None:
         temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
     if tahun is not None and bulan is not None:
@@ -397,9 +396,55 @@ def data_gejala():
     data["index"] = temp_df["diagnosa_primer"].value_counts().index.values.tolist()
     data["values"] = temp_df["diagnosa_primer"].value_counts().values.tolist()
 
+
+    # Mengelompokkan data berdasarkan 'diagnosa_primer' dan menghitung jumlah total pendapatan dan pengeluaran
+    grouped_data = temp_df.groupby('diagnosa_primer').agg(
+        pendapatan=('total_tagihan', 'sum'),
+        pengeluaran=('total_semua_hpp', 'sum')
+    ).reset_index()
+
+    # Mengurutkan data berdasarkan 'pendapatan' dari yang terbesar
+    grouped_data_sorted = grouped_data.sort_values(by='pendapatan', ascending=False)
+    grouped_data_sorted2 = grouped_data.sort_values(by='pengeluaran', ascending=False)
+
+    # Mengonversi kolom ke list untuk dikirimkan sebagai respons API atau digunakan lebih lanjut
+    data["index1"] = grouped_data_sorted["diagnosa_primer"].tolist()
+    data["index2"] = grouped_data_sorted2["diagnosa_primer"].tolist()
+    data["pendapatan"] = grouped_data_sorted["pendapatan"].tolist()
+    data["pengeluaran"] = grouped_data_sorted2["pengeluaran"].tolist()
+    return data
+
+@app.route("/api/poliklinik", methods=["GET"])
+def data_poliklinik():
+    data = {}
+    bulan = request.args.get("bulan", type=int)
+    tahun = request.args.get("tahun", type=int)
+    kabupaten = request.args.get("kabupaten", type=str)
+    temp_df = dc1
+
+    if kabupaten is not None:
+        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
+    if tahun is not None:
+        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
+    if tahun is not None and bulan is not None:
+        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
+
     filtered_data = temp_df[temp_df["jenis_registrasi"] == "Rawat Jalan"]
     data["indexPoliklinik"] = filtered_data["nama_departemen"].value_counts().index.values.tolist()
     data["valuesPoliklinik"] = filtered_data["nama_departemen"].value_counts().values.tolist()
+
+    grouped_dataPoli = filtered_data.groupby('nama_departemen').agg(
+        pendapatan=('total_tagihan', 'sum'),
+        pengeluaran=('total_semua_hpp', 'sum')
+    ).reset_index()
+
+    grouped_dataPoli_sorted = grouped_dataPoli.sort_values(by='pendapatan', ascending=False)
+    grouped_dataPoli_sorted2 = grouped_dataPoli.sort_values(by='pengeluaran', ascending=False)
+
+    data["index"] = grouped_dataPoli_sorted["nama_departemen"].tolist()
+    data["index2"] = grouped_dataPoli_sorted2["nama_departemen"].tolist()
+    data["pendapatan"] = grouped_dataPoli_sorted["pendapatan"].tolist()
+    data["pengeluaran"] = grouped_dataPoli_sorted2["pengeluaran"].tolist()
     return data
 
 @app.route("/api/last-update", methods=["GET"])
