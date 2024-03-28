@@ -6,7 +6,7 @@ from werkzeug.utils import secure_filename
 import pandas as pd
 from tools import read_dataset_pickle, save_dataset_as_pickle, read_dataset
 from preprocess import preprocess_dataset
-from filterdf import filter_in_year, filter_in_year_month
+from filterdf import filter_in_year, filter_in_year_month,filter_last
 
 ALLOWED_EXTENSIONS = { "csv", "xlsx" }
 UPLOAD_FOLDER = "dataset/"
@@ -129,6 +129,9 @@ def data_pendapatan():
 
     if kabupaten is not None:
         temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
+    if tahun is None and kabupaten is None:
+        temp_df = filter_last(temp_df, "waktu_registrasi", from_last_data = "True", months = 6)
+        # temp_df =  filter_in_year(temp_df,"waktu_registrasi", tahun)
     if tahun is not None:
         temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
     if tahun is not None and bulan is not None:
@@ -143,6 +146,9 @@ def data_pendapatan():
         resample_option = "D"
 
     if tipe_data == "jenisregis":
+        if tahun is None and bulan is None:
+            resample_option = "ME"
+
         temp_df = temp_df[["waktu_registrasi","jenis_registrasi","total_tagihan"]]
         # Grouping berdasarkan jenisregis
         temp_df = temp_df.groupby(['jenis_registrasi', pd.Grouper(key='waktu_registrasi', freq=resample_option)])['total_tagihan'].sum().reset_index()
