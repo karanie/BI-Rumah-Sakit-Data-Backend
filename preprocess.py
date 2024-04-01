@@ -37,6 +37,9 @@ def convert_gender_name(df):
     df.loc[df["jenis_kelamin"] == "laki-laki", "jenis_kelamin"] = "Laki-laki"
     return df
 
+def sort_date_values(df):
+    df = df.sort_values("waktu_registrasi")
+    return df
 
 def preprocess_dataset(df):
     func_list = [
@@ -48,6 +51,7 @@ def preprocess_dataset(df):
             drop_duplicates,
             convert_rujukan,
             convert_gender_name,
+            sort_date_values,
             ]
 
     for f in func_list:

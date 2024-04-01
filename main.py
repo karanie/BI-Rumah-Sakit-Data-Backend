@@ -42,6 +42,8 @@ def data_dashboard():
     temp_df['tahun'] = temp_df['waktu_registrasi'].dt.year
     jumlah_pasien_tahunan = df_paling_awal.groupby('tahun')['id_pasien'].nunique()
     jumlah_kunjungan_tahunan = temp_df.groupby('tahun')['id_registrasi'].count()
+    df_pasien_baru = dc1[dc1["fix_pasien_baru"] == "t"][["waktu_registrasi", "id_pasien"]]
+    df_pasien_lama = dc1[dc1["fix_pasien_baru"] == "f"][["waktu_registrasi", "id_pasien"]]
 
     data["jumlahPasien"] = jml_pasien
     data["jumlahKunjungan"] = jml_kunjungan
@@ -49,6 +51,8 @@ def data_dashboard():
     data["jumlahKunjunganTahunan"] = jumlah_kunjungan_tahunan.to_dict()
     data["pendapatan"] = temp_df['total_tagihan'].sum()
     data["pengeluaran"] = temp_df['total_semua_hpp'].sum()
+    data["jumlahPasienBaru"] = int(df_pasien_baru['id_pasien'].count())
+    data["jumlahPasienLama"] = int(df_pasien_lama['id_pasien'].count())
     return data
 
 @app.route("/api/rujukan", methods=["GET"])
@@ -154,13 +158,19 @@ def data_pendapatan():
         temp_df = temp_df.groupby(['jenis_registrasi', pd.Grouper(key='waktu_registrasi', freq=resample_option)])['total_tagihan'].sum().reset_index()
         temp_df = temp_df.pivot_table(index='waktu_registrasi', columns='jenis_registrasi', values='total_tagihan', fill_value=0)
 
-        data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
+
+        data["index"] = temp_df.index.strftime(f"%Y-%m{'-%d' if resample_option == 'D' else '' }").tolist()
         data["columns"] = temp_df.columns.tolist()
         data["values"] = temp_df.values.transpose().tolist()
         return data
+    elif tipe_data == "pendapatanLastDay":
+        temp_df = temp_df[["waktu_registrasi", "total_tagihan", "total_semua_hpp"]]
+        temp_df = filter_last(temp_df, "waktu_registrasi", from_last_data=True, days = 1)
+        data["pendapatanLastDay"] = float(temp_df["total_tagihan"].sum())
+        data["pengeluaranLastDay"] = float(temp_df["total_semua_hpp"].sum())
+        return data
     else:
         data["total_tagihan"] = float(temp_df["total_tagihan"].sum())
-
         return data
 
 
