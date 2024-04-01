@@ -456,7 +456,9 @@ def data_poliklinik():
     data["index"] = grouped_dataPoli_sorted["nama_departemen"].tolist()
     data["index2"] = grouped_dataPoli_sorted2["nama_departemen"].tolist()
     data["pendapatan"] = grouped_dataPoli_sorted["pendapatan"].tolist()
-    data["pengeluaran"] = grouped_dataPoli_sorted2["pengeluaran"].tolist()
+    data["pendapatan2"] = grouped_dataPoli_sorted2["pendapatan"].tolist()
+    data["pengeluaran"] = grouped_dataPoli_sorted["pengeluaran"].tolist()
+    data["pengeluaran2"] = grouped_dataPoli_sorted2["pengeluaran"].tolist()
     return data
 
 @app.route("/api/last-update", methods=["GET"])
