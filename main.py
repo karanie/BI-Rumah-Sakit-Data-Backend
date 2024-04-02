@@ -7,6 +7,8 @@ import pandas as pd
 from tools import read_dataset_pickle, save_dataset_as_pickle, read_dataset
 from preprocess import preprocess_dataset
 from filterdf import filter_in_year, filter_in_year_month,filter_last
+from darts.timeseries import TimeSeries
+from darts.models import ExponentialSmoothing
 
 ALLOWED_EXTENSIONS = { "csv", "xlsx" }
 UPLOAD_FOLDER = "dataset/"
@@ -217,6 +219,9 @@ def data_demografi():
     bulan = request.args.get("bulan", type=int)
 
     temp_df = dc1
+
+    temp_df = temp_df.loc[temp_df["provinsi"] == "RIAU"]
+
     if tahun is not None and bulan is not None:
         temp_df = filter_in_year_month(temp_df, "waktu_registrasi", tahun, bulan)
     if tahun is not None:
@@ -228,24 +233,50 @@ def data_demografi():
         return data
     elif tipe_data == "timeseries":
         if tahun is None and bulan is None:
-            temp_df = dc1[["waktu_registrasi", "kabupaten"]]
+            temp_df = temp_df[["waktu_registrasi", "kabupaten"]]
             temp_df = filter_in_year(temp_df, "waktu_registrasi", 2021)
         else:
             temp_df = temp_df[["waktu_registrasi", "kabupaten"]]
 
-        # Pick top 10
         temp_df = temp_df[["kabupaten", "waktu_registrasi"]]
-        temp_df["kabupaten_filtered"] = temp_df["kabupaten"]
-        temp_df.loc[~temp_df["kabupaten_filtered"].isin(temp_df["kabupaten"].value_counts()[:10].index), "kabupaten_filtered"] = "Lainnya"
-        temp_df = temp_df.drop(columns="kabupaten")
-
-        temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["kabupaten_filtered"])
-        resample_option = "D" if bulan is not None else "W"
+        temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["kabupaten"])
+        #resample_option = "D" if bulan is not None else "W"
+        resample_option = "D"
         temp_df = temp_df.resample(resample_option).sum()
 
         data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
         data["columns"] = temp_df.columns.tolist()
         data["values"] = temp_df.values.transpose().tolist()
+        return data
+    elif tipe_data == "forecast":
+        if tahun is None and bulan is None:
+            temp_df = dc1[["waktu_registrasi", "kabupaten"]]
+            temp_df = filter_in_year(temp_df, "waktu_registrasi", 2021)
+        else:
+            temp_df = temp_df[["waktu_registrasi", "kabupaten"]]
+
+        #temp_df = temp_df.loc[temp_df["kabupaten"] == "Kota Pekanbaru"]
+
+        temp_df = temp_df[["kabupaten", "waktu_registrasi"]]
+        temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["kabupaten"])
+        #resample_option = "D" if bulan is not None else "W"
+        resample_option = "D"
+        temp_df = temp_df.resample(resample_option).sum()
+
+        data = []
+        for i in temp_df.columns:
+            ts = TimeSeries.from_dataframe(temp_df[[i]])
+            train, val = ts[:-30], ts[-30:]
+
+            model = ExponentialSmoothing()
+            model.fit(train)
+
+            forecast = model.predict(90)
+            data.append({
+                "index": forecast.time_index.strftime("%Y-%m-%d").tolist(),
+                "columns": forecast.columns.tolist(),
+                "values": forecast.values().transpose().tolist(),
+                })
         return data
 
     return data
