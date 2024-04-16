@@ -44,8 +44,8 @@ def data_dashboard():
     temp_df['tahun'] = temp_df['waktu_registrasi'].dt.year
     jumlah_pasien_tahunan = df_paling_awal.groupby('tahun')['id_pasien'].nunique()
     jumlah_kunjungan_tahunan = temp_df.groupby('tahun')['id_registrasi'].count()
-    df_pasien_baru = dc1[dc1["fix_pasien_baru"] == "t"][["waktu_registrasi", "id_pasien"]]
-    df_pasien_lama = dc1[dc1["fix_pasien_baru"] == "f"][["waktu_registrasi", "id_pasien"]]
+    df_pasien_baru = temp_df[temp_df["fix_pasien_baru"] == "t"][["waktu_registrasi", "id_pasien"]]
+    df_pasien_lama = temp_df[temp_df["fix_pasien_baru"] == "f"][["waktu_registrasi", "id_pasien"]]
 
     data["jumlahPasien"] = jml_pasien
     data["jumlahKunjungan"] = jml_kunjungan
@@ -171,8 +171,38 @@ def data_pendapatan():
         data["pendapatanLastDay"] = float(temp_df["total_tagihan"].sum())
         data["pengeluaranLastDay"] = float(temp_df["total_semua_hpp"].sum())
         return data
+    elif tipe_data == "forecast":
+        # temp_df = temp_df[temp_df["kabupaten"] == "Kota Pekanbaru"]
+        # temp_df = filter_in_year(temp_df, "waktu_registrasi", 2022)
+        temp_df = temp_df[["waktu_registrasi", "total_tagihan", "total_semua_hpp"]]
+        temp_df = temp_df.set_index("waktu_registrasi")
+        temp_df = temp_df.resample("D").sum()
+
+        data = []
+        for i in temp_df.columns:
+            ts = TimeSeries.from_dataframe(temp_df[[i]])
+            train, val = ts[:-30], ts[-30:]
+
+            model = ExponentialSmoothing()
+            model.fit(train)
+
+            forecast = model.predict(60)
+            data.append({
+                "index": forecast.time_index.strftime("%Y-%m-%d").tolist(),
+                "columns": forecast.columns.tolist(),
+                "values": forecast.values().transpose().tolist(),
+                })
+        return data
     else:
-        data["total_tagihan"] = float(temp_df["total_tagihan"].sum())
+        if tahun is None and bulan is None:
+            resample_option = "D"
+
+        temp_df = temp_df[["waktu_registrasi", "total_tagihan", "total_semua_hpp"]]
+        temp_df = temp_df.set_index("waktu_registrasi")
+        temp_df = temp_df.resample(resample_option).sum()
+        data["index"] = temp_df.index.strftime(f"%Y-%m{'-%d' if resample_option == 'D' else '' }").tolist()
+        data["columns"] = temp_df.columns.tolist()
+        data["values"] = temp_df.values.transpose().tolist()
         return data
 
 
