@@ -171,9 +171,31 @@ def data_pendapatan():
         data["pendapatanLastDay"] = float(temp_df["total_tagihan"].sum())
         data["pengeluaranLastDay"] = float(temp_df["total_semua_hpp"].sum())
         return data
+    elif tipe_data == "forecast":
+        # temp_df = temp_df[temp_df["kabupaten"] == "Kota Pekanbaru"]
+        # temp_df = filter_in_year(temp_df, "waktu_registrasi", 2022)
+        temp_df = temp_df[["waktu_registrasi", "total_tagihan", "total_semua_hpp"]]
+        temp_df = temp_df.set_index("waktu_registrasi")
+        temp_df = temp_df.resample("D").sum()
+
+        data = []
+        for i in temp_df.columns:
+            ts = TimeSeries.from_dataframe(temp_df[[i]])
+            train, val = ts[:-30], ts[-30:]
+
+            model = ExponentialSmoothing()
+            model.fit(train)
+
+            forecast = model.predict(60)
+            data.append({
+                "index": forecast.time_index.strftime("%Y-%m-%d").tolist(),
+                "columns": forecast.columns.tolist(),
+                "values": forecast.values().transpose().tolist(),
+                })
+        return data
     else:
         if tahun is None and bulan is None:
-            resample_option = "ME"
+            resample_option = "D"
 
         temp_df = temp_df[["waktu_registrasi", "total_tagihan", "total_semua_hpp"]]
         temp_df = temp_df.set_index("waktu_registrasi")
