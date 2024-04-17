@@ -466,10 +466,6 @@ def data_gejala():
     if tahun is not None and bulan is not None:
         temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
 
-    data["index"] = temp_df["diagnosa_primer"].value_counts().index.values.tolist()
-    data["values"] = temp_df["diagnosa_primer"].value_counts().values.tolist()
-
-
     # Mengelompokkan data berdasarkan 'diagnosa_primer' dan menghitung jumlah total pendapatan dan pengeluaran
     grouped_data = temp_df.groupby('diagnosa_primer').agg(
         pendapatan=('total_tagihan', 'sum'),
@@ -477,8 +473,8 @@ def data_gejala():
     ).reset_index()
 
     # Mengurutkan data berdasarkan 'pendapatan' dari yang terbesar
-    grouped_data_sorted = grouped_data.sort_values(by='pendapatan', ascending=False)
-    grouped_data_sorted2 = grouped_data.sort_values(by='pengeluaran', ascending=False)
+    grouped_data_sorted = grouped_data.sort_values(by='pendapatan', ascending=False).iloc[:10]
+    grouped_data_sorted2 = grouped_data.sort_values(by='pengeluaran', ascending=False).iloc[:10]
 
     # Mengonversi kolom ke list untuk dikirimkan sebagai respons API atau digunakan lebih lanjut
     data["index1"] = grouped_data_sorted["diagnosa_primer"].tolist()
@@ -511,8 +507,8 @@ def data_poliklinik():
         pengeluaran=('total_semua_hpp', 'sum')
     ).reset_index()
 
-    grouped_dataPoli_sorted = grouped_dataPoli.sort_values(by='pendapatan', ascending=False)
-    grouped_dataPoli_sorted2 = grouped_dataPoli.sort_values(by='pengeluaran', ascending=False)
+    grouped_dataPoli_sorted = grouped_dataPoli.sort_values(by='pendapatan', ascending=False).iloc[:10]
+    grouped_dataPoli_sorted2 = grouped_dataPoli.sort_values(by='pengeluaran', ascending=False).iloc[:10]
 
     data["index"] = grouped_dataPoli_sorted["nama_departemen"].tolist()
     data["index2"] = grouped_dataPoli_sorted2["nama_departemen"].tolist()
