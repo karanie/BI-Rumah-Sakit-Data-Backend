@@ -615,6 +615,14 @@
             "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'",
             "version": "==0.7.1"
         },
+        "et-xmlfile": {
+            "hashes": [
+                "sha256:8eb9e2bc2f8c97e37a2dc85a09ecdcdec9d8a396530a6d5a33b30b9a92da0c5c",
+                "sha256:a2ba85d1d6a74ef63837eed693bcb89c3f752169b0e3e7ae5b16ca5e1b3deada"
+            ],
+            "markers": "python_version >= '3.6'",
+            "version": "==1.1.0"
+        },
         "executing": {
             "hashes": [
                 "sha256:35afe2ce3affba8ee97f2d69927fa823b08b472b7b994e36a52a964b93d16147",
@@ -1615,6 +1623,15 @@
             "markers": "platform_system == 'Linux' and platform_machine == 'x86_64'",
             "version": "==12.1.105"
         },
+        "openpyxl": {
+            "hashes": [
+                "sha256:a6f5977418eff3b2d5500d54d9db50c8277a368436f4e4f8ddb1be3422870184",
+                "sha256:f91456ead12ab3c6c2e9491cf33ba6d08357d802192379bb482f1033ade496f5"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.6'",
+            "version": "==3.1.2"
+        },
         "overrides": {
             "hashes": [
                 "sha256:55158fa3d93b98cc75299b1e67078ad9003ca27945c76162c1c0766d6f91820a",
@@ -2437,6 +2454,14 @@
             "markers": "python_version >= '3.8'",
             "version": "==2.5"
         },
+        "sqlglot": {
+            "hashes": [
+                "sha256:519ea26007688bbc831939c0c6125762ad5c71339df1ac8184a64d762f75684c",
+                "sha256:b80a35de7716464de89cc77678d0a7f972e4a8acaaa7cefcdc6db05ffeb6c951"
+            ],
+            "markers": "python_version >= '3.7'",
+            "version": "==23.10.0"
+        },
         "stack-data": {
             "hashes": [
                 "sha256:836a778de4fec4dcd1dcd89ed8abff8a221f58308462e1c4aa2a3cf30148f0b9",
@@ -2610,6 +2635,18 @@
             ],
             "markers": "python_version >= '3.8'",
             "version": "==0.9.6"
+        },
+        "triton": {
+            "hashes": [
+                "sha256:0af58716e721460a61886668b205963dc4d1e4ac20508cc3f623aef0d70283d5",
+                "sha256:227cc6f357c5efcb357f3867ac2a8e7ecea2298cd4606a8ba1e931d1d5a947df",
+                "sha256:a2294514340cfe4e8f4f9e5c66c702744c4a117d25e618bd08469d0bfed1e2e5",
+                "sha256:b8ce26093e539d727e7cf6f6f0d932b1ab0574dc02567e684377630d86723ace",
+                "sha256:da58a152bddb62cafa9a857dd2bc1f886dbf9f9c90a2b5da82157cd2b34392b0",
+                "sha256:e8fe46d3ab94a8103e291bd44c741cc294b91d1d81c1a2888254cbf7ff846dab"
+            ],
+            "markers": "python_version < '3.12' and platform_system == 'Linux' and platform_machine == 'x86_64'",
+            "version": "==2.2.0"
         },
         "types-python-dateutil": {
             "hashes": [
