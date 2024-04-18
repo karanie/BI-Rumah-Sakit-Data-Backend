@@ -36,7 +36,7 @@ def data_dashboard():
         temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
 
     jml_pasien = temp_df['id_pasien'].nunique()
-    jml_kunjungan = temp_df['no_registrasi'].nunique()
+    jml_kunjungan = temp_df['id_registrasi'].nunique()
 
     # Jumlah pasien tiap tahun
     df_paling_awal = dc1.loc[dc1.groupby('id_pasien')['waktu_registrasi'].idxmin()]
@@ -547,8 +547,78 @@ def update_dataset():
                 "preprocess_time": preprocess_time_end - preprocess_time_start,
                 "concat_time": concat_time_end - concat_time_start,
                 "save_time": save_time_end - save_time_start,
-                }
+        }
 
     return {
             "status": "Unsupported method"
-            }
+    }
+
+@app.route("/api/regis-byRujukan", methods=["GET"])
+def regis_byrujukan():
+    # data={}
+    bulan = request.args.get("bulan", type=int)
+    tahun = request.args.get("tahun", type=int)
+    kabupaten = request.args.get("kabupaten", type=str)
+    temp_df = dc1
+
+    if kabupaten is not None:
+        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
+    if tahun is not None:
+        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
+    if tahun is not None and bulan is not None:
+        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
+
+    df_regis_rujuk = temp_df.groupby(['jenis_registrasi','rujukan']).size().reset_index(name='kunjungan')
+    grouped = df_regis_rujuk.groupby('jenis_registrasi')
+
+    data = {regis: group.drop(columns='jenis_registrasi').to_dict(orient='records') for regis, group in grouped}
+
+    return data
+
+@app.route("/api/diagnosis", methods=["GET"])
+def data_diagnosis():
+    data = {}
+    tipe_data = request.args.get("tipe_data")
+    bulan = request.args.get("bulan", type=int)
+    tahun = request.args.get("tahun", type=int)
+    jenis_registrasi = request.args.get("jenisregistrasi", type=str)
+    diagnosa = request.args.get("diagnosa", type=str)
+    temp_df = dc1
+
+    if jenis_registrasi is not None:
+        temp_df = temp_df[temp_df["jenis_registrasi"] == jenis_registrasi]
+        if diagnosa is not None and tahun is not None:
+            temp_df_bef = filter_in_year(temp_df,"waktu_registrasi",tahun-1)
+            c = temp_df_bef[(temp_df_bef['diagnosa_primer']==diagnosa)].shape[0]
+            data["count_disease_prev_year"] = c
+
+            x = temp_df[(temp_df['diagnosa_primer']==diagnosa)].groupby(temp_df['waktu_registrasi'].dt.year).size().reset_index(name='count')
+            data['last5years']=x.set_index('waktu_registrasi')['count'].to_dict()
+
+            
+    if tahun is not None:
+        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
+    if tahun is not None and bulan is not None:
+        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
+    if diagnosa is not None:
+        temp_df = temp_df[temp_df["diagnosa_primer"] == diagnosa]
+
+    if tipe_data is None:
+        data["id"] = temp_df["diagnosa_primer"].value_counts().index.values.tolist()
+        data["values"] = temp_df["diagnosa_primer"].value_counts().values.tolist()
+        return data
+    elif tipe_data == "timeseries":
+        if tahun is None and bulan is None:
+            resample_option = "Y"
+        elif tahun is not None and bulan is None:
+            resample_option = "M"
+        else:
+            resample_option = "D"
+
+    temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["diagnosa_primer"])
+    temp_df = temp_df.resample(resample_option).sum()
+
+    data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
+    data["columns"] = temp_df.columns.tolist()
+    data["values"] = temp_df.values.transpose().tolist()
+    return data
