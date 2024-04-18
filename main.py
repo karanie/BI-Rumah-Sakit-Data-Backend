@@ -43,9 +43,11 @@ def data_dashboard():
     df_paling_awal['tahun'] = df_paling_awal['waktu_registrasi'].dt.year
     temp_df['tahun'] = temp_df['waktu_registrasi'].dt.year
     jumlah_pasien_tahunan = df_paling_awal.groupby('tahun')['id_pasien'].nunique()
-    jumlah_kunjungan_tahunan = temp_df.groupby('tahun')['id_registrasi'].count()
     df_pasien_baru = temp_df[temp_df["fix_pasien_baru"] == "t"][["waktu_registrasi", "id_pasien"]]
     df_pasien_lama = temp_df[temp_df["fix_pasien_baru"] == "f"][["waktu_registrasi", "id_pasien"]]
+
+    # Biar gak ke filter chartnya di Kunjungan Page
+    jumlah_kunjungan_tahunan = dc1.groupby('tahun')['id_registrasi'].count()
 
     data["jumlahPasien"] = jml_pasien
     data["jumlahKunjungan"] = jml_kunjungan
@@ -466,6 +468,11 @@ def data_gejala():
     if tahun is not None and bulan is not None:
         temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
 
+    top_10_penyakit = temp_df["diagnosa_primer"].value_counts().iloc[:10]
+
+    data["index"] = top_10_penyakit.index.values.tolist()
+    data["values"] = top_10_penyakit.values.tolist()
+
     # Mengelompokkan data berdasarkan 'diagnosa_primer' dan menghitung jumlah total pendapatan dan pengeluaran
     grouped_data = temp_df.groupby('diagnosa_primer').agg(
         pendapatan=('total_tagihan', 'sum'),
@@ -499,8 +506,11 @@ def data_poliklinik():
         temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
 
     filtered_data = temp_df[temp_df["jenis_registrasi"] == "Rawat Jalan"]
-    data["indexPoliklinik"] = filtered_data["nama_departemen"].value_counts().index.values.tolist()
-    data["valuesPoliklinik"] = filtered_data["nama_departemen"].value_counts().values.tolist()
+    department_counts = filtered_data['nama_departemen'].value_counts()
+    sorted_departments = department_counts.sort_values(ascending=False).iloc[:10]
+
+    data["indexPoliklinik"] = sorted_departments.index.values.tolist()
+    data["valuesPoliklinik"] = sorted_departments.values.tolist()
 
     grouped_dataPoli = filtered_data.groupby('nama_departemen').agg(
         pendapatan=('total_tagihan', 'sum'),
