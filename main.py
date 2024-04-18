@@ -137,7 +137,8 @@ def data_pendapatan():
 
     if kabupaten is not None:
         temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
-    if tahun is None and kabupaten is None:
+    #if tahun is None and kabupaten is None:
+    if tahun is None :
         temp_df = filter_last(temp_df, "waktu_registrasi", from_last_data = "True", months = 6)
         # temp_df =  filter_in_year(temp_df,"waktu_registrasi", tahun)
     if tahun is not None:
