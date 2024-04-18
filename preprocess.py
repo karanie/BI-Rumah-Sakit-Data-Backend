@@ -2,9 +2,11 @@ import pandas as pd
 import numpy as np
 
 def convert_kabupaten_na(df):
-    df["kabupaten"] = df["kabupaten"].astype(str)
+    try:
+        df["kabupaten"] = df["kabupaten"].cat.add_categories(["Tidak diketahui"])
+    except ValueError:
+        pass
     df["kabupaten"] = df["kabupaten"].fillna("Tidak diketahui")
-    df["kabupaten"] = df["kabupaten"].astype("category")
     return df
 
 def convert_kabupaten_name(df):
@@ -16,8 +18,6 @@ def convert_kabupaten_name(df):
     df["kabupaten"] = df["kabupaten"].replace("^KABUPATEN", "KAB.", regex=True)
 
     df["kabupaten"] = df["kabupaten"].astype("category")
-    df.loc[df["kabupaten"] == "Nan", "kabupaten"] = np.NaN
-    df.loc[:, "kabupaten"] = df["kabupaten"].cat.remove_unused_categories()
     return df
 
 def convert_kabupaten_casing(df):
@@ -26,8 +26,6 @@ def convert_kabupaten_casing(df):
     df["kabupaten"] = df["kabupaten"].str.title()
 
     df["kabupaten"] = df["kabupaten"].astype("category")
-    df.loc[df["kabupaten"] == "Nan", "kabupaten"] = np.NaN
-    df.loc[:, "kabupaten"] = df["kabupaten"].cat.remove_unused_categories()
     return df
 
 def drop_gender_ambigu(df):
