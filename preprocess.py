@@ -46,7 +46,7 @@ def convert_rujukan(df):
 def convert_gender_name(df):
     df.loc[df["jenis_kelamin"] == "perempuan", "jenis_kelamin"] = "Perempuan"
     df.loc[df["jenis_kelamin"] == "laki-laki", "jenis_kelamin"] = "Laki-laki"
-    dc1["jenis_kelamin"] = dc1["jenis_kelamin"].cat.remove_unused_categories()
+    df["jenis_kelamin"] = df["jenis_kelamin"].cat.remove_unused_categories()
     return df
 
 def sort_date_values(df):
