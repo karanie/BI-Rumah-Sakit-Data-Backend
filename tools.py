@@ -6,23 +6,32 @@ import pgzip
 def read_dataset_pickle(files, save_as_pickle=True):
     out = []
     for i in files:
-        pickle_file = i + ".pkl.gz"
-        excel_file = i + ".xlsx"
+        file_list = [
+                {"ext": ".pkl.gz"},
+                {"ext": ".csv"},
+                {"ext": ".xlsx"},
+                ]
 
-        pickle_exists = os.path.isfile(pickle_file)
-        excel_exists = os.path.isfile(excel_file)
+        for j, _ in enumerate(file_list):
+            file_list[j]["exists"] = os.path.isfile(i + file_list[j]["ext"])
+            if file_list[j]["exists"]:
+                file_list[j]["mtime"] = os.path.getmtime(i + file_list[j]["ext"])
 
-        pickle_mtime = os.path.getmtime(pickle_file) if pickle_exists else 0
-        excel_mtime = os.path.getmtime(excel_file) if excel_exists else 0
+        file_list = list(filter(lambda item: item["exists"], file_list))
+        if not file_list:
+            raise Exception("No available dataset")
+        latest_file = sorted(file_list, key=lambda item: item["mtime"])[-1]
+
+        print(f"Reading {i + latest_file['ext']}")
 
         # Read the pickle file of the pandas dataframe if it exists.
         # This prevents a really long time file reading by pandas.
-        if pickle_exists and (not excel_exists or pickle_mtime >= excel_mtime):
-            with pgzip.open(pickle_file, "rb", thread=0) as f:
+        if latest_file["ext"] == ".pkl.gz":
+            with pgzip.open(i + latest_file["ext"], "rb", thread=0) as f:
                 out.append(pickle.load(f))
         # Otherwise, read the xlsx file and save it in pickle if save_as_pickle parameter is True.
         else:
-            out.append(read_dataset(excel_file))
+            out.append(read_dataset(i + latest_file["ext"]))
             if (save_as_pickle):
                 save_dataset_as_pickle(out[len(out) - 1], i)
     return out
