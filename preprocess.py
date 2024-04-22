@@ -39,6 +39,7 @@ def drop_duplicates(df):
 def convert_rujukan(df):
     df.loc[df["rujukan"] == "Dalam", "rujukan"] = "Dalam RS"
     df.loc[df["rujukan"] == "Luar", "rujukan"] = "Luar RS"
+    df["rujukan"] = df["rujukan"].cat.remove_unused_categories()
     return df
 
 def convert_gender_name(df):
