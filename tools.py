@@ -59,7 +59,8 @@ def read_dataset(path):
             "tanggal_lahir",
             "tglPulang",
             "usia",
-            "kategori_usia"
+            "kategori_usia",
+            "pekerjaan",
     ]
     dtype = {
             "jenis_kelamin": "category",
@@ -73,6 +74,7 @@ def read_dataset(path):
             "diagnosa_primer": "category",
             "nama_instansi_utama": "category",
             "kategori_usia": "category",
+            "pekerjaan": "category",
     }
     parse_dates = [
         "waktu_registrasi",
