@@ -601,8 +601,8 @@ def regis_byrujukan():
 
     return data
 
-@app.route("/api/diagnosis", methods=["GET"])
-def data_diagnosis():
+@app.route("/api/diagnosa", methods=["GET"])
+def data_diagnosa():
     data = {}
     tipe_data = request.args.get("tipe_data")
     bulan = request.args.get("bulan", type=int)
@@ -610,41 +610,125 @@ def data_diagnosis():
     jenis_registrasi = request.args.get("jenisregistrasi", type=str)
     diagnosa = request.args.get("diagnosa", type=str)
     temp_df = dc1
-
-    if jenis_registrasi is not None:
-        temp_df = temp_df[temp_df["jenis_registrasi"] == jenis_registrasi]
-        if diagnosa is not None and tahun is not None:
-            temp_df_bef = filter_in_year(temp_df,"waktu_registrasi",tahun-1)
-            c = temp_df_bef[(temp_df_bef['diagnosa_primer']==diagnosa)].shape[0]
-            data["count_disease_prev_year"] = c
-
-            x = temp_df[(temp_df['diagnosa_primer']==diagnosa)].groupby(temp_df['waktu_registrasi'].dt.year).size().reset_index(name='count')
-            data['last5years']=x.set_index('waktu_registrasi')['count'].to_dict()
-
-            
+        
     if tahun is not None:
         temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
     if tahun is not None and bulan is not None:
         temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
+    
+    if jenis_registrasi is not None:
+        temp_df = temp_df[temp_df["jenis_registrasi"] == jenis_registrasi]
+
+    if diagnosa is None:
+        data["index"] = temp_df["diagnosa_primer"].value_counts().index.values.tolist()
+        data["values"] = temp_df["diagnosa_primer"].value_counts().values.tolist()
+        return data
+
     if diagnosa is not None:
         temp_df = temp_df[temp_df["diagnosa_primer"] == diagnosa]
 
-    if tipe_data is None:
-        data["id"] = temp_df["diagnosa_primer"].value_counts().index.values.tolist()
-        data["values"] = temp_df["diagnosa_primer"].value_counts().values.tolist()
-        return data
-    elif tipe_data == "timeseries":
-        if tahun is None and bulan is None:
-            resample_option = "Y"
-        elif tahun is not None and bulan is None:
-            resample_option = "M"
-        else:
-            resample_option = "D"
+        if tipe_data == "timeseries":
+            if tahun is None and bulan is None:
+                resample_option = "Y"
+            elif tahun is not None and bulan is None:
+                resample_option = "M"
+            else:
+                resample_option = "D"
+        elif tipe_data is None :
+            data["index"] = temp_df["diagnosa_primer"].value_counts().index.values.tolist()
+            data["values"] = temp_df["diagnosa_primer"].value_counts().values.tolist()
+            return data
 
-    temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["diagnosa_primer"])
+    df_diagnosa = temp_df[temp_df["diagnosa_primer"] == diagnosa]
+    temp_df = pd.crosstab(df_diagnosa["waktu_registrasi"], df_diagnosa["diagnosa_primer"])
     temp_df = temp_df.resample(resample_option).sum()
+
+    # Hitung kategori usia yang dominan untuk setiap waktu registrasi
+    if resample_option == "Y":
+        dominan_usia = df_diagnosa.groupby(pd.Grouper(key="waktu_registrasi", freq="YE"))["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None)
+        dominan_usia_kesimpulan = df_diagnosa.groupby(df_diagnosa["waktu_registrasi"].dt.year)["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None).mode()[0]
+    elif resample_option == "M":
+        dominan_usia = df_diagnosa.groupby(pd.Grouper(key="waktu_registrasi", freq="M"))["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None)
+        dominan_usia_kesimpulan = df_diagnosa.groupby([df_diagnosa["waktu_registrasi"].dt.year, df_diagnosa["waktu_registrasi"].dt.month])["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None).mode()[0]
+    elif resample_option == "D":
+        dominan_usia = df_diagnosa.groupby(pd.Grouper(key="waktu_registrasi", freq="D"))["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None)
+        dominan_usia_kesimpulan = df_diagnosa.groupby([df_diagnosa["waktu_registrasi"].dt.year, df_diagnosa["waktu_registrasi"].dt.month, df_diagnosa["waktu_registrasi"].dt.date])["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None).mode()[0]
+
 
     data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
     data["columns"] = temp_df.columns.tolist()
-    data["values"] = temp_df.values.transpose().tolist()
+    # data["values"] = temp_df.values.transpose().tolist()
+    data["values"] = temp_df.iloc[:, 0].tolist()
+
+
+    data["dominant_age_category"] = dominan_usia.reindex(temp_df.index).tolist()
+    data["dominant_age_category_summary"] = dominan_usia_kesimpulan
+
+    return data
+
+@app.route("/api/departemen", methods=["GET"])
+def data_departemen():
+    data = {}
+    tipe_data = request.args.get("tipe_data")
+    bulan = request.args.get("bulan", type=int)
+    tahun = request.args.get("tahun", type=int)
+    jenis_registrasi = request.args.get("jenisregistrasi", type=str)
+    departemen = request.args.get("departemen", type=str)
+    temp_df = dc1
+        
+    if tahun is not None:
+        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
+    if tahun is not None and bulan is not None:
+        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
+    
+    if jenis_registrasi is not None:
+        temp_df = temp_df[temp_df["jenis_registrasi"] == jenis_registrasi]
+
+    if departemen is None:
+        data["index"] = temp_df["nama_departemen"].value_counts().index.values.tolist()
+        data["values"] = temp_df["nama_departemen"].value_counts().values.tolist()
+        return data
+
+    if departemen is not None:
+        temp_df = temp_df[temp_df["nama_departemen"] == departemen]
+
+        if tipe_data == "timeseries":
+            if tahun is None and bulan is None:
+                resample_option = "Y"
+            elif tahun is not None and bulan is None:
+                resample_option = "M"
+            else:
+                resample_option = "D"
+        elif tipe_data is None :
+            data["index"] = temp_df["nama_departemen"].value_counts().index.values.tolist()
+            data["values"] = temp_df["nama_departemen"].value_counts().values.tolist()
+            data["indexDiagnosa"] = temp_df["diagnosa_primer"].value_counts().index.values.tolist()
+            data["valuesDiagnosa"] = temp_df["diagnosa_primer"].value_counts().values.tolist()
+            return data
+
+    df_departemen = temp_df[temp_df["nama_departemen"] == departemen]
+    temp_df = pd.crosstab(df_departemen["waktu_registrasi"], df_departemen["nama_departemen"])
+    temp_df = temp_df.resample(resample_option).sum()
+
+    # Hitung kategori usia yang dominan untuk setiap waktu registrasi
+    if resample_option == "Y":
+        dominan_usia = df_departemen.groupby(pd.Grouper(key="waktu_registrasi", freq="YE"))["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None)
+        dominan_usia_kesimpulan = df_departemen.groupby(df_departemen["waktu_registrasi"].dt.year)["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None).mode()[0]
+    elif resample_option == "M":
+        dominan_usia = df_departemen.groupby(pd.Grouper(key="waktu_registrasi", freq="M"))["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None)
+        dominan_usia_kesimpulan = df_departemen.groupby([df_departemen["waktu_registrasi"].dt.year, df_departemen["waktu_registrasi"].dt.month])["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None).mode()[0]
+    elif resample_option == "D":
+        dominan_usia = df_departemen.groupby(pd.Grouper(key="waktu_registrasi", freq="D"))["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None)
+        dominan_usia_kesimpulan = df_departemen.groupby([df_departemen["waktu_registrasi"].dt.year, df_departemen["waktu_registrasi"].dt.month, df_departemen["waktu_registrasi"].dt.date])["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None).mode()[0]
+
+
+    data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
+    data["columns"] = temp_df.columns.tolist()
+    # data["values"] = temp_df.values.transpose().tolist()
+    data["values"] = temp_df.iloc[:, 0].tolist()
+
+
+    data["dominant_age_category"] = dominan_usia.reindex(temp_df.index).tolist()
+    data["dominant_age_category_summary"] = dominan_usia_kesimpulan
+
     return data
