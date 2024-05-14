@@ -7,6 +7,7 @@ def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols
         tipe_data = request.args.get("tipe_data")
         timeseries = request.args.get("timeseries", type=bool)
         forecast = request.args.get("forecast", type=bool)
+        pivot = request.args.get("pivot", type=bool)
         tahun = request.args.get("tahun", type=int)
         bulan = request.args.get("bulan", type=int)
         relative_time = request.args.get("relative_time", type=str)
@@ -14,9 +15,10 @@ def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols
         end_date = request.args.get("end_date", type=str)
         resample = request.args.get("resample", type=str)
 
-        temp_df = df[[timeCol, *categoricalCols, *numericalCols, "provinsi"]]
-        temp_df = temp_df.loc[temp_df["provinsi"] == "RIAU"]
+        #temp_df = df[[timeCol, *categoricalCols, *numericalCols, "provinsi"]]
+        #temp_df = temp_df.loc[temp_df["provinsi"] == "RIAU"]
 
+        temp_df = df[[timeCol, *categoricalCols, *numericalCols]]
         temp_df = filtertime(temp_df, timeCol, month=bulan, year=tahun, relative_time=relative_time, start_date=start_date, end_date=end_date)
 
         data = {}
@@ -31,10 +33,10 @@ def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols
             return data
 
         if timeseries:
-            return getTimeSeriesData(temp_df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols)
+            return getTimeSeriesData(temp_df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, pivot=pivot)
 
         if forecast:
-            return getExponentialSmoothingForecastData(temp_df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols)
+            return getExponentialSmoothingForecastData(temp_df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, pivot=pivot)
 
         return data
 
