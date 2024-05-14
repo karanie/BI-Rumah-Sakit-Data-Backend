@@ -29,3 +29,29 @@ def filter_last(df, column, from_last_data=True, **kwds):
 
     return filtered_df
 
+def filter_range(df, column, start_date, end_date):
+    df[column] = pd.to_datetime(df[column])
+    filtered_df = df[(df[column] >= start_date) & (df[column] <= end_date)]
+    return filtered_df
+
+def filtertime(df, timeColumn, month=None, year=None, relative_time=None, start_date=None, end_date=None):
+    if year is not None and month is not None:
+        return filter_in_year_month(df, timeColumn, year, month)
+    if year is not None:
+        return filter_in_year(df, timeColumn, year)
+    if relative_time is not None:
+        if relative_time == "day":
+            return filter_last(df, timeColumn, from_last_data=True, days=1)
+        elif relative_time == "week":
+            return filter_last(df, timeColumn, from_last_data=True, weeks=1)
+        elif relative_time == "month":
+            return filter_last(df, timeColumn, from_last_data=True, months=1)
+        elif relative_time == "3month":
+            return filter_last(df, timeColumn, from_last_data=True, months=3)
+        elif relative_time == "6month":
+            return filter_last(df, timeColumn, from_last_data=True, months=6)
+        elif relative_time == "year":
+            return filter_last(df, timeColumn, from_last_data=True, years=1)
+    if start_date is not None and end_date is not None:
+        return filter_range(df, timeColumn, start_date=start_date, end_date=end_date)
+    return df
