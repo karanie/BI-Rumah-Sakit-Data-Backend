@@ -189,6 +189,18 @@ def data_pendapatan():
             data['jenis_penjamin'] = grouped_data[grouped_data['diagnosa_primer']==diagnosa]['jenis_penjamin'].tolist()
             data['pendapatan'] = grouped_data[grouped_data['diagnosa_primer']==diagnosa]['pendapatan'].tolist()
             data['pengeluaran'] = grouped_data[grouped_data['diagnosa_primer']==diagnosa]['pengeluaran'].tolist()
+
+            if jenis_registrasi == 'Rawat Inap':
+                grouped_data = temp_df.groupby(['diagnosa_primer','kelas_hak']).agg(
+                    pendapatan=('total_tagihan', 'sum'),
+                    pengeluaran=('total_semua_hpp', 'sum')
+                ).reset_index()
+
+                data['kelas_hak'] = grouped_data[grouped_data['diagnosa_primer']==diagnosa]['kelas_hak'].tolist()
+                data['pendapatanKelas'] = grouped_data[grouped_data['diagnosa_primer']==diagnosa]['pendapatan'].tolist()
+                data['pengeluaranKelas'] = grouped_data[grouped_data['diagnosa_primer']==diagnosa]['pengeluaran'].tolist()
+                data['avgLosRawatan'] = round(temp_df[temp_df['diagnosa_primer']==diagnosa]['los_rawatan'].mean())
+
             return data
 
         grouped_data_sorted = grouped_data.sort_values(by=sort_arg, ascending=False)
