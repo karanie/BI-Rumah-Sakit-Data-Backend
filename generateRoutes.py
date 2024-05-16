@@ -2,11 +2,14 @@ from flask import request
 from filterdf import filtertime
 from getdata import getTimeSeriesData, getExponentialSmoothingForecastData
 
+def type_is_true(value):
+    return value.lower() == "true"
+
 def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols=[]):
     def callback():
         tipe_data = request.args.get("tipe_data")
-        timeseries = request.args.get("timeseries", type=bool)
-        forecast = request.args.get("forecast", type=bool)
+        timeseries = request.args.get("timeseries", type=type_is_true)
+        forecast = request.args.get("forecast", type=type_is_true)
         pivot = request.args.get("pivot", type=bool)
         tahun = request.args.get("tahun", type=int)
         bulan = request.args.get("bulan", type=int)
