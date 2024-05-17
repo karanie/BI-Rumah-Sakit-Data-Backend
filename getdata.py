@@ -1,11 +1,10 @@
-import re
 import pandas as pd
 from darts.timeseries import TimeSeries
 from darts.models import ExponentialSmoothing
 
 def getCatNumData(df, timeCol, resample="D", categoricalCols=[], numericalCols=[], pivot=False):
     if not categoricalCols and not numericalCols:
-        raise Execption("Either categoricalCols or numericalCols is required")
+        raise Exception("Either categoricalCols or numericalCols is required")
 
     temp_df = df[[*categoricalCols, *numericalCols, timeCol]].set_index(timeCol)
 
