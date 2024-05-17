@@ -1,12 +1,13 @@
 import json
 import os.path, time
+import pickle
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import pandas as pd
 from tools import read_dataset_pickle, save_dataset_as_pickle, read_dataset
 from preprocess import preprocess_dataset
-from filterdf import filter_in_year, filter_in_year_month,filter_last
+from filterdf import filter_in_year, filter_in_year_month,filter_last,resample_opt,default_filter
 from darts.timeseries import TimeSeries
 from darts.models import ExponentialSmoothing
 
@@ -19,45 +20,6 @@ CORS(app)
 
 dc1 = read_dataset_pickle(["dataset/DC1"])[0]
 dc1 = preprocess_dataset(dc1)
-
-@app.route("/api/dashboard", methods=["GET"])
-def data_dashboard():
-    data = {}
-    bulan = request.args.get("bulan", type=int)
-    tahun = request.args.get("tahun", type=int)
-    kabupaten = request.args.get("kabupaten", type=str)
-    temp_df = dc1
-
-    if kabupaten is not None:
-        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
-    if tahun is not None:
-        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
-    if tahun is not None and bulan is not None:
-        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
-
-    jml_pasien = temp_df['id_pasien'].nunique()
-    jml_kunjungan = temp_df['id_registrasi'].nunique()
-
-    # Jumlah pasien tiap tahun
-    df_paling_awal = dc1.loc[dc1.groupby('id_pasien')['waktu_registrasi'].idxmin()]
-    df_paling_awal['tahun'] = df_paling_awal['waktu_registrasi'].dt.year
-    temp_df['tahun'] = temp_df['waktu_registrasi'].dt.year
-    jumlah_pasien_tahunan = df_paling_awal.groupby('tahun')['id_pasien'].nunique()
-    df_pasien_baru = temp_df[temp_df["fix_pasien_baru"] == "t"][["waktu_registrasi", "id_pasien"]]
-    df_pasien_lama = temp_df[temp_df["fix_pasien_baru"] == "f"][["waktu_registrasi", "id_pasien"]]
-
-    # Biar gak ke filter chartnya di Kunjungan Page
-    jumlah_kunjungan_tahunan = dc1.groupby('tahun')['id_registrasi'].count()
-
-    data["jumlahPasien"] = jml_pasien
-    data["jumlahKunjungan"] = jml_kunjungan
-    data["jumlahPasienTahunan"] = jumlah_pasien_tahunan.to_dict()
-    data["jumlahKunjunganTahunan"] = jumlah_kunjungan_tahunan.to_dict()
-    data["pendapatan"] = temp_df['total_tagihan'].sum()
-    data["pengeluaran"] = temp_df['total_semua_hpp'].sum()
-    data["jumlahPasienBaru"] = int(df_pasien_baru['id_pasien'].count())
-    data["jumlahPasienLama"] = int(df_pasien_lama['id_pasien'].count())
-    return data
 
 @app.route("/api/pendapatan", methods=["GET"])
 def data_pendapatan():
@@ -109,58 +71,115 @@ def data_pendapatan():
         pengeluaran=('total_semua_hpp', 'sum')
     ).reset_index()
 
-    if tipe_data == "jenisregis":
-        if tahun is None and bulan is None:
-            resample_option = "ME"
+    if tipe_data == "jenis_registrasi":
+        if not forecast:
+            if tahun is None:
+                temp_df = filter_last(temp_df, "waktu_registrasi", from_last_data = "True", months = 6)
 
-        temp_df = temp_df[["waktu_registrasi","jenis_registrasi","total_tagihan"]]
-        # Grouping berdasarkan jenisregis
-        temp_df = temp_df.groupby(['jenis_registrasi', pd.Grouper(key='waktu_registrasi', freq=resample_option)])['total_tagihan'].sum().reset_index()
-        temp_df = temp_df.pivot_table(index='waktu_registrasi', columns='jenis_registrasi', values='total_tagihan', fill_value=0)
+            if tahun is None and bulan is None:
+                resample_option = "D"
+
+            temp_df = temp_df[["waktu_registrasi","jenis_registrasi","total_tagihan"]]
+            # Grouping berdasarkan jenisregis
+            temp_df = temp_df.groupby(['jenis_registrasi', pd.Grouper(key='waktu_registrasi', freq=resample_option)])['total_tagihan'].sum().reset_index()
+            temp_df = temp_df.pivot_table(index='waktu_registrasi', columns='jenis_registrasi', values='total_tagihan', fill_value=0)
 
 
-        data["index"] = temp_df.index.strftime(f"%Y-%m{'-%d' if resample_option == 'D' else '' }").tolist()
-        data["columns"] = temp_df.columns.tolist()
-        data["values"] = temp_df.values.transpose().tolist()
+            data["index"] = temp_df.index.strftime(f"%Y-%m{'-%d' if resample_option == 'D' else '' }").tolist()
+            data["columns"] = temp_df.columns.tolist()
+            data["values"] = temp_df.values.transpose().tolist()
+            return data
+
+        else:
+            # Preprocess
+            dc1['waktu_registrasi'] = pd.to_datetime(dc1['waktu_registrasi'], format= "%Y/%m/%d")
+            df = dc1[['waktu_registrasi', 'jenis_registrasi', 'id_registrasi']]
+            agg_df = df.groupby(['waktu_registrasi','jenis_registrasi']).agg({'id_registrasi':'count'}).reset_index().sort_values(['jenis_registrasi','waktu_registrasi'])
+            total_sales_df = agg_df.pivot(index='waktu_registrasi',columns='jenis_registrasi', values='id_registrasi')
+
+            # Modelling
+            prediction_days = request.args.get("days", type=int)
+            forecast_start_date = max(total_sales_df.index)
+
+            models_path = [
+                "models/pendapatan/prophet_pendapatan_model_IGD.pkl",
+                "models/pendapatan/prophet_pendapatan_model_OTC.pkl",
+                "models/pendapatan/prophet_pendapatan_model_Rawat Jalan.pkl",
+                "models/pendapatan/prophet_pendapatan_model_Rawat Inap.pkl",
+            ]
+            models = []
+            data = []
+
+            for i in models_path:
+                if os.path.isfile(i):
+                    with open(i, "rb") as file:
+                        models.append(pickle.load(file))
+
+            for model in models:
+                future = model.make_future_dataframe(periods=30)
+                fcst_prophet_train = model.predict(future)
+
+                forecasted_df = fcst_prophet_train[fcst_prophet_train['ds']>=forecast_start_date]
+                forecasted_df = forecasted_df[['ds', 'yhat']]
+
+                data.append({
+                    "index": forecasted_df.ds.dt.strftime("%Y-%m-%d").tolist(),
+                    "columns": ["Prediksi Jumlah Pendapatan"],
+                    "values": [forecasted_df.yhat.tolist()]
+                })
+            return data
+
+    elif tipe_data == "pendapatanPenjamin":
+        temp_df = temp_df[["jenis_penjamin", "total_tagihan"]]
+        temp_df = temp_df.set_index("jenis_penjamin")
+        temp_df = temp_df.groupby(["jenis_penjamin"]).sum()
+
+        data["index"] = temp_df.index.values.tolist()
+        data["values"] = temp_df["total_tagihan"].values.tolist()
         return data
+
+    elif tipe_data == "pengeluaranPenjamin":
+        temp_df = temp_df[["jenis_penjamin", "total_semua_hpp"]]
+        temp_df = temp_df.set_index("jenis_penjamin")
+        temp_df = temp_df.groupby(["jenis_penjamin"]).sum()
+
+        data["index"] = temp_df.index.tolist()
+        data["values"] = temp_df["total_semua_hpp"].values.tolist()
+        return data
+
+    elif tipe_data == "penjamin":
+        temp_df = temp_df[["jenis_penjamin", "total_semua_hpp", "total_tagihan"]]
+        temp_df = temp_df.set_index("jenis_penjamin")
+        temp_df = temp_df.groupby(["jenis_penjamin"]).sum()
+
+        data["index"] = temp_df.index.tolist()
+        data["pengeluaran"] = temp_df["total_semua_hpp"].values.tolist()
+        data["pendapatan"] = temp_df["total_tagihan"].values.tolist()
+
+        return data
+
     elif tipe_data == "pendapatanLastDay":
         temp_df = temp_df[["waktu_registrasi", "total_tagihan", "total_semua_hpp"]]
         temp_df = filter_last(temp_df, "waktu_registrasi", from_last_data=True, days = 1)
         data["pendapatanLastDay"] = float(temp_df["total_tagihan"].sum())
         data["pengeluaranLastDay"] = float(temp_df["total_semua_hpp"].sum())
         return data
-    elif tipe_data == "forecast":
-        temp_df = temp_df[["waktu_registrasi", "total_tagihan", "total_semua_hpp"]]
-        temp_df = temp_df.set_index("waktu_registrasi")
-        temp_df = temp_df.resample("D").sum()
 
-        data = []
-        for i in temp_df.columns:
-            ts = TimeSeries.from_dataframe(temp_df[[i]])
-            train, val = ts[:-30], ts[-30:]
-
-            model = ExponentialSmoothing()
-            model.fit(train)
-
-            forecast = model.predict(60)
-            data.append({
-                "index": forecast.time_index.strftime("%Y-%m-%d").tolist(),
-                "columns": forecast.columns.tolist(),
-                "values": forecast.values().transpose().tolist(),
-                })
-        return data
-    elif tipe_data == "totalPendapatan":
+    elif tipe_data == "totalPendapatanBulanIni":
         if tahun is None :
             temp_df = filter_in_year_month(temp_df, "waktu_registrasi", temp_df.iloc[-1]["waktu_registrasi"].year, temp_df.iloc[-1]["waktu_registrasi"].month)
-
         data["value"] = temp_df["total_tagihan"].sum()
         return data
 
-    elif tipe_data == "totalPengeluaran":
+    elif tipe_data == "totalPengeluaranBulanIni":
         if tahun is None :
             temp_df = filter_in_year_month(temp_df, "waktu_registrasi", temp_df.iloc[-1]["waktu_registrasi"].year, temp_df.iloc[-1]["waktu_registrasi"].month)
-
         data["value"] = temp_df["total_semua_hpp"].sum()
+        return data
+
+    elif tipe_data == "total":
+        data["pendapatan"] = temp_df["total_tagihan"].sum()
+        data["pengeluaran"] = temp_df["total_semua_hpp"].sum()
         return data
 
     elif tipe_data == "pendapatanGejala":
@@ -179,12 +198,12 @@ def data_pendapatan():
 
     # modified by chintya
     elif tipe_data == 'diagnosa' :
-        if diagnosa is not None : 
+        if diagnosa is not None :
             grouped_data = temp_df.groupby(['diagnosa_primer','jenis_penjamin']).agg(
                 pendapatan=('total_tagihan', 'sum'),
                 pengeluaran=('total_semua_hpp', 'sum')
             ).reset_index()
-            
+
             data['index'] = grouped_data[grouped_data['diagnosa_primer']==diagnosa]['diagnosa_primer'].unique().tolist()
             data['jenis_penjamin'] = grouped_data[grouped_data['diagnosa_primer']==diagnosa]['jenis_penjamin'].tolist()
             data['pendapatan'] = grouped_data[grouped_data['diagnosa_primer']==diagnosa]['pendapatan'].tolist()
@@ -261,20 +280,89 @@ def data_pendapatan():
         data["pengeluaran"] = grouped_dataPoli_sorted["pengeluaran"].tolist()
         return data
 
-    else:
-        if tahun is None:
-            temp_df = filter_last(temp_df, "waktu_registrasi", from_last_data = "True", months = 6)
+    elif tipe_data == "profit":
+        if tahun is None :
+             temp_df = filter_in_year_month(temp_df, "waktu_registrasi", temp_df.iloc[-1]["waktu_registrasi"].year, temp_df.iloc[-1]["waktu_registrasi"].month)
 
-        if tahun is None and bulan is None:
-            resample_option = "D"
-
-        temp_df = temp_df[["waktu_registrasi", "total_tagihan", "total_semua_hpp"]]
-        temp_df = temp_df.set_index("waktu_registrasi")
-        temp_df = temp_df.resample(resample_option).sum()
-        data["index"] = temp_df.index.strftime(f"%Y-%m{'-%d' if resample_option == 'D' else '' }").tolist()
-        data["columns"] = temp_df.columns.tolist()
-        data["values"] = temp_df.values.transpose().tolist()
+        pendapatan = temp_df['total_tagihan'].sum()
+        pengeluaran = temp_df['total_semua_hpp'].sum()
+        data["value"] = pendapatan - pengeluaran
         return data
+
+    else:
+        if not forecast:
+            if tahun is None:
+                temp_df = filter_last(temp_df, "waktu_registrasi", from_last_data = "True", months = 6)
+
+            if tahun is None and bulan is None:
+                resample_option = "D"
+
+            temp_df = temp_df[["waktu_registrasi", "total_tagihan", "total_semua_hpp"]]
+            temp_df = temp_df.set_index("waktu_registrasi")
+            temp_df = temp_df.resample(resample_option).sum()
+            data["index"] = temp_df.index.strftime(f"%Y-%m{'-%d' if resample_option == 'D' else '' }").tolist()
+            data["columns"] = temp_df.columns.tolist()
+            data["values"] = temp_df.values.transpose().tolist()
+            return data
+
+        else:
+            temp_df = temp_df[["waktu_registrasi", "total_tagihan", "total_semua_hpp"]]
+            temp_df = temp_df.set_index("waktu_registrasi")
+            temp_df = temp_df.resample("D").sum()
+
+            data = []
+            for i in temp_df.columns:
+                ts = TimeSeries.from_dataframe(temp_df[[i]])
+                train, val = ts[:-30], ts[-30:]
+
+                model = ExponentialSmoothing()
+                model.fit(train)
+
+                forecast = model.predict(60)
+                data.append({
+                    "index": forecast.time_index.strftime("%Y-%m-%d").tolist(),
+                    "columns": forecast.columns.tolist(),
+                    "values": forecast.values().transpose().tolist(),
+                    })
+            return data
+
+
+
+            # dc1['waktu_registrasi'] = pd.to_datetime(dc1['waktu_registrasi'], format= "%Y/%m/%d")
+            # df = dc1[['waktu_registrasi', 'jenis_registrasi', 'id_registrasi']]
+            # agg_df = df.groupby(['waktu_registrasi','jenis_registrasi']).agg({'id_registrasi':'count'}).reset_index().sort_values(['jenis_registrasi','waktu_registrasi'])
+            # total_sales_df = agg_df.pivot(index='waktu_registrasi',columns='jenis_registrasi', values='id_registrasi')
+
+            # # Modelling
+            # prediction_days = request.args.get("days", type=int)
+            # forecast_start_date = max(total_sales_df.index)
+
+            # models_path = [
+            #     "models/prophet_Pengeluaran (1).pkl",
+            #     "models/prophet_Pendapatan (1).pkl",
+            # ]
+            # models = []
+            # data = []
+
+            # for i in models_path:
+            #     if os.path.isfile(i):
+            #         with open(i, "rb") as file:
+            #             models.append(pickle.load(file))
+
+            # for model in models:
+            #     future = model.make_future_dataframe(periods=30)
+            #     fcst_prophet_train = model.predict(future)
+
+            #     forecasted_df = fcst_prophet_train[fcst_prophet_train['ds']>=forecast_start_date]
+            #     forecasted_df = forecasted_df[['ds', 'yhat']]
+
+            #     data.append({
+            #         "index": forecasted_df.ds.dt.strftime("%Y-%m-%d").tolist(),
+            #         "columns": ["Prediksi Jumlah Pendapatan"],
+            #         "values": [forecasted_df.yhat.tolist()]
+            #     })
+            # return data
+
 
 
 @app.route("/api/kunjungan", methods=["GET"])
@@ -284,6 +372,12 @@ def data_kunjungan():
     bulan = request.args.get("bulan", type=int)
     kabupaten = request.args.get("kabupaten", type=str)
     tipe_data = request.args.get("tipe_data")
+    forecast = request.args.get("forecast", type=bool)
+
+    # params detailKunjungan
+    timeseries = request.args.get("timeseries", type=bool)
+    diagnosa = request.args.get("diagnosa", type=str)
+    jenis_registrasi = request.args.get("jenis_registrasi", type=str)
 
     temp_df = dc1
 
@@ -301,7 +395,6 @@ def data_kunjungan():
     else:
         resample_option = "D"
 
-    if tipe_data == "pertumbuhanPertahun":
         temp_df = temp_df[["waktu_registrasi"]]
         temp_df = temp_df.set_index("waktu_registrasi")
         temp_df["Jumlah Kunjungan"] = 1
@@ -310,6 +403,20 @@ def data_kunjungan():
         data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
         data["columns"] = temp_df.columns.tolist()
         data["values"] = temp_df.values.transpose().tolist()
+
+        return data
+
+    elif tipe_data == "pertumbuhanPertahun":
+
+        temp_df = dc1[["waktu_registrasi"]]
+        temp_df = temp_df.set_index("waktu_registrasi")
+        temp_df["Jumlah Kunjungan"] = 1
+        temp_df = temp_df.resample("Y").sum()
+
+        data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
+        data["columns"] = temp_df.columns.tolist()
+        data["values"] = temp_df["Jumlah Kunjungan"].transpose().tolist()
+
         return data
 
     elif tipe_data == "rujukan":
@@ -322,14 +429,85 @@ def data_kunjungan():
         data["values"] = temp_df.values.transpose().tolist()
         return data
 
-    elif tipe_data == "jenis_registrasi":
-        temp_df = temp_df[["waktu_registrasi","jenis_registrasi"]]
-        temp_df = pd.crosstab(temp_df["waktu_registrasi"],temp_df["jenis_registrasi"])
+    elif tipe_data == "usia":
+        temp_df = temp_df[["waktu_registrasi", "kategori_usia"]]
+        temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["kategori_usia"])
         temp_df = temp_df.resample(resample_option).sum()
 
         data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
         data["columns"] = temp_df.columns.tolist()
         data["values"] = temp_df.values.transpose().tolist()
+        return data
+
+    elif tipe_data == "jenis_registrasi":
+        if not forecast:
+            if tahun is None:
+                temp_df = filter_last(temp_df, "waktu_registrasi", from_last_data = "True", months = 6)
+            if tahun is None and bulan is None:
+                resample_option = "D"
+
+            temp_df = temp_df[["waktu_registrasi","jenis_registrasi"]]
+            temp_df = pd.crosstab(temp_df["waktu_registrasi"],temp_df["jenis_registrasi"])
+            temp_df = temp_df.resample(resample_option).sum()
+
+            data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
+            data["columns"] = temp_df.columns.tolist()
+            data["values"] = temp_df.values.transpose().tolist()
+            return data
+
+        else:
+            #Preprocessing
+            dc1['waktu_registrasi'] = pd.to_datetime(dc1['waktu_registrasi'], format= "%Y/%m/%d")
+            df = dc1[['waktu_registrasi', 'jenis_registrasi', 'id_registrasi']]
+            agg_df = df.groupby(['waktu_registrasi','jenis_registrasi']).agg({'id_registrasi':'count'}).reset_index().sort_values(['jenis_registrasi','waktu_registrasi'])
+            total_sales_df = agg_df.pivot(index='waktu_registrasi',columns='jenis_registrasi', values='id_registrasi')
+
+            #Modeling
+            prediction_days = request.args.get("days", type=int)
+            forecast_start_date = max(total_sales_df.index)
+
+            models_path = [
+                "models/kunjungan/prophet_kunjungan_model_IGD.pkl",
+                "models/kunjungan/prophet_kunjungan_model_OTC.pkl",
+                "models/kunjungan/prophet_kunjungan_model_Rawat Jalan.pkl",
+                "models/kunjungan/prophet_kunjungan_model_Rawat Inap.pkl",
+            ]
+            models = []
+            data = []
+
+            for i in models_path:
+                if os.path.isfile(i):
+                    with open(i, "rb") as file:
+                        models.append(pickle.load(file))
+
+            for model in models:
+                future = model.make_future_dataframe(periods=30)
+                fcst_prophet_train = model.predict(future)
+
+                # fig1 = model.plot(fcst_prophet_train)
+                # fig2 = model.plot_components(fcst_prophet_train)
+
+                forecasted_df = fcst_prophet_train[fcst_prophet_train['ds']>=forecast_start_date]
+
+                # forecasted_dfs.append(forecasted_df)
+
+                forecasted_df = forecasted_df[['ds', 'yhat']]
+
+                data.append({
+                    "index": forecasted_df.ds.dt.strftime("%Y-%m-%d").tolist(),
+                    "columns": ["Prediksi Jumlah Kunjungan"],
+                    "values": [forecasted_df.yhat.tolist()]
+                })
+            return data
+
+    elif tipe_data == "jumlahJenis_registrasi":
+        temp_df = temp_df[["jenis_registrasi"]]
+        temp_df["count"] = 1
+        temp_df = temp_df.set_index("jenis_registrasi")
+        temp_df = temp_df.groupby(["jenis_registrasi"]).sum()
+
+        data["index"] = temp_df.index.values.tolist()
+        data["values"] = temp_df["count"].tolist()
         return data
 
     elif tipe_data == "poliklinik":
@@ -348,6 +526,153 @@ def data_kunjungan():
         data["values"] = top_10_penyakit.values.tolist()
         return data
 
+    elif tipe_data == "jumlahKunjungan":
+        if tahun is None :
+             temp_df = filter_in_year_month(temp_df, "waktu_registrasi", temp_df.iloc[-1]["waktu_registrasi"].year, temp_df.iloc[-1]["waktu_registrasi"].month)
+        data["value"] = temp_df['no_registrasi'].nunique()
+        return data
+
+    elif tipe_data == "penjamin":
+        temp_df = temp_df[["jenis_penjamin"]]
+        temp_df["count"] = 1
+        temp_df = temp_df.set_index("jenis_penjamin")
+        temp_df = temp_df.groupby(["jenis_penjamin"]).sum()
+
+        data["index"] = temp_df.index.values.tolist()
+        data["values"] = temp_df["count"].values.tolist()
+        return data
+
+    elif tipe_data == "regis-byRujukan":
+        df_regis_rujuk = temp_df.groupby(['jenis_registrasi','rujukan']).size().reset_index(name='kunjungan')
+        grouped = df_regis_rujuk.groupby('jenis_registrasi')
+        data = {regis: group.drop(columns='jenis_registrasi').to_dict(orient='records') for regis, group in grouped}
+        return data
+
+    elif tipe_data == "diagnosa":
+        if jenis_registrasi is not None:
+            temp_df = temp_df[temp_df["jenis_registrasi"] == jenis_registrasi]
+
+            if diagnosa is None:
+                data["index"] = temp_df["diagnosa_primer"].value_counts().index.values.tolist()
+                data["values"] = temp_df["diagnosa_primer"].value_counts().values.tolist()
+                return data
+
+            if diagnosa is not None:
+                temp_df = temp_df[temp_df["diagnosa_primer"] == diagnosa]
+
+                if timeseries:
+                    if tahun is None and bulan is None:
+                        resample_option = "YE"
+                    elif tahun is not None and bulan is None:
+                        resample_option = "M"
+                    else:
+                        resample_option = "D"
+
+                else:
+                    data["index"] = temp_df["diagnosa_primer"].value_counts().index.values.tolist()
+                    data["values"] = temp_df["diagnosa_primer"].value_counts().values.tolist()
+                    return data
+
+            df_diagnosa = temp_df[temp_df["diagnosa_primer"] == diagnosa]
+            temp_df = pd.crosstab(df_diagnosa["waktu_registrasi"], df_diagnosa["diagnosa_primer"])
+            temp_df = temp_df.resample(resample_option).sum()
+
+            # Hitung kategori usia yang dominan untuk setiap waktu registrasi
+            if resample_option == "YE":
+                dominan_usia_kesimpulan = df_diagnosa.groupby(df_diagnosa["waktu_registrasi"].dt.year)["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None).mode()[0]
+            elif resample_option == "M":
+                dominan_usia_kesimpulan = df_diagnosa.groupby([df_diagnosa["waktu_registrasi"].dt.year, df_diagnosa["waktu_registrasi"].dt.month])["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None).mode()[0]
+            elif resample_option == "D":
+                dominan_usia_kesimpulan = df_diagnosa.groupby([df_diagnosa["waktu_registrasi"].dt.year, df_diagnosa["waktu_registrasi"].dt.month, df_diagnosa["waktu_registrasi"].dt.date])["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None).mode()[0]
+
+            dominan_usia = df_diagnosa.groupby(pd.Grouper(key="waktu_registrasi", freq=resample_option))["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None)
+
+            data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
+            data["columns"] = temp_df.columns.tolist()
+            # data["values"] = temp_df.values.transpose().tolist()
+            data["values"] = temp_df.iloc[:, 0].tolist()
+
+
+            data["dominant_age_category"] = dominan_usia.reindex(temp_df.index).tolist()
+            data["dominant_age_category_summary"] = dominan_usia_kesimpulan
+
+            return data
+
+        else:
+            return data
+
+
+@app.route("/api/pasien", methods=["GET"])
+def data_pasien():
+    data = {}
+    tipe_data = request.args.get("tipe_data")
+    bulan = request.args.get("bulan", type=int)
+    tahun = request.args.get("tahun", type=int)
+    kabupaten = request.args.get("kabupaten", type=str)
+
+    temp_df = dc1
+    temp_df = default_filter(temp_df, kabupaten, tahun, bulan)
+
+    if tipe_data == "jumlahJenisKelamin":
+        # FIlter Pasien Unique
+        temp_df = temp_df.loc[temp_df.groupby(['id_pasien', 'jenis_kelamin']).head(1).index, ['id_pasien', 'jenis_kelamin',"waktu_registrasi"]]
+        data["index"] = temp_df["jenis_kelamin"].value_counts().sort_index().index.values.tolist()
+        data["values"] = temp_df["jenis_kelamin"].value_counts().sort_index().values.tolist()
+        return data
+
+    elif tipe_data == "timeseriesJenisKelamin":
+        # FIlter Pasien Unique
+        temp_df = temp_df.loc[temp_df.groupby(['id_pasien', 'jenis_kelamin']).head(1).index, ['id_pasien', 'jenis_kelamin',"waktu_registrasi"]]
+
+        resample_option = resample_opt(tahun,bulan)
+
+        temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["jenis_kelamin"])
+        temp_df = temp_df.resample(resample_option).sum()
+
+        data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
+        data["columns"] = temp_df.columns.tolist()
+        data["values"] = temp_df.values.transpose().tolist()
+        return data
+
+    elif tipe_data == "pekerjaan":
+        data["index"] = temp_df["pekerjaan"].value_counts().iloc[-10:].index.values.tolist()
+        data["values"] = temp_df["pekerjaan"].value_counts().iloc[-10:].values.tolist()
+        return data
+
+    elif tipe_data == "jumlahPasien":
+        if tahun is None :
+             temp_df = filter_in_year_month(temp_df, "waktu_registrasi", temp_df.iloc[-1]["waktu_registrasi"].year, temp_df.iloc[-1]["waktu_registrasi"].month)
+        data["value"] = temp_df['id_pasien'].nunique()
+        return data
+
+    elif tipe_data == "jumlahPasienPertahun":
+        df_paling_awal = temp_df.loc[temp_df.groupby('id_pasien')['waktu_registrasi'].idxmin()]
+
+        # Ekstrak tahun dari kolom waktu registrasi
+        df_paling_awal['tahun'] = df_paling_awal['waktu_registrasi'].dt.year
+
+        # Hitung jumlah pasien unik untuk setiap tahun
+        jumlah_pasien_tahunan = df_paling_awal.groupby('tahun')['id_pasien'].nunique()
+
+        data["index"] = jumlah_pasien_tahunan.index.values.tolist()
+        data["values"] = jumlah_pasien_tahunan.values.tolist()
+
+        return data
+
+    elif tipe_data == "pasienLamaBaru":
+        df_pasien_baru = temp_df[temp_df["fix_pasien_baru"] == "t"][["waktu_registrasi", "id_pasien"]]
+        df_pasien_lama = temp_df[temp_df["fix_pasien_baru"] == "f"][["waktu_registrasi", "id_pasien"]]
+
+        data["jumlahPasienBaru"] = int(df_pasien_baru['id_pasien'].count())
+        data["jumlahPasienLama"] = int(df_pasien_lama['id_pasien'].count())
+
+        return data
+
+    elif tipe_data == "usia":
+        temp_df = temp_df.loc[temp_df.groupby(['id_pasien', 'kategori_usia']).head(1).index, ['id_pasien', 'kategori_usia',"waktu_registrasi"]]
+        data["index"] = temp_df["kategori_usia"].value_counts().sort_index().index.values.tolist()
+        data["values"] = temp_df["kategori_usia"].value_counts().sort_index().values.tolist()
+        return data
 
 @app.route("/api/demografi", methods=["GET"])
 def data_demografi():
@@ -392,7 +717,6 @@ def data_demografi():
         else:
             temp_df = temp_df[["waktu_registrasi", "kabupaten"]]
 
-
         temp_df = temp_df[["kabupaten", "waktu_registrasi"]]
         temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["kabupaten"])
         resample_option = "D"
@@ -414,135 +738,6 @@ def data_demografi():
                 })
         return data
 
-    return data
-
-@app.route("/api/usia", methods=["GET"])
-def data_usia():
-
-    jml_pasien = dc1['id_pasien'].nunique()
-    # Filter Pasien ID yang Unique
-    df_paling_awal = dc1.loc[dc1.groupby('id_pasien')['waktu_registrasi'].idxmin()]
-
-    # Ekstrak tahun dari kolom waktu registrasi
-    df_paling_awal['tahun'] = df_paling_awal['waktu_registrasi'].dt.year
-
-    # Hitung jumlah pasien unik untuk setiap tahun
-    jumlah_pasien_tahunan = df_paling_awal.groupby('tahun')['id_pasien'].nunique()
-
-    # Kelompokkan berdasarkan kelompok usia dan hitung jumlahnya
-    jumlah_kelompok_usia = df_paling_awal.groupby('kategori_usia').size()
-
-    # Menghitung jumlah kategori pada setiap tahun
-    dc1_count = df_paling_awal.groupby([df_paling_awal['waktu_registrasi'].dt.year, 'kategori_usia']).size().unstack(fill_value=0).reset_index()
-
-    data = {
-        "jumlah_pasien":jml_pasien,
-        "jumlah_pasien_tahunan": jumlah_pasien_tahunan.to_dict(),
-        "kategori": jumlah_kelompok_usia.to_dict(),
-        "bytahun": dict(zip(dc1_count['waktu_registrasi'], dc1_count.set_index('waktu_registrasi').to_dict(orient='index').values()))
-    }
-    return data
-
-@app.route("/api/jeniskelamin", methods=["GET"])
-def data_jeniskelamin():
-    data = {}
-    tipe_data = request.args.get("tipe_data")
-    bulan = request.args.get("bulan", type=int)
-    tahun = request.args.get("tahun", type=int)
-    kabupaten = request.args.get("kabupaten", type=str)
-    temp_df = dc1
-
-    if kabupaten is not None:
-        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
-    if tahun is not None:
-        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
-    if tahun is not None and bulan is not None:
-        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
-
-    # FIlter Pasien Unique
-    temp_df = temp_df.loc[temp_df.groupby(['id_pasien', 'jenis_kelamin']).head(1).index, ['id_pasien', 'jenis_kelamin',"waktu_registrasi"]]
-
-    if tipe_data is None:
-        data["index"] = temp_df["jenis_kelamin"].value_counts().sort_index().index.values.tolist()
-        data["values"] = temp_df["jenis_kelamin"].value_counts().sort_index().values.tolist()
-        return data
-    elif tipe_data == "timeseries":
-        if tahun is None and bulan is None:
-            resample_option = "Y"
-        elif tahun is not None and bulan is None:
-            resample_option = "M"
-        else:
-            resample_option = "D"
-
-    temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["jenis_kelamin"])
-    temp_df = temp_df.resample(resample_option).sum()
-
-    data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
-    data["columns"] = temp_df.columns.tolist()
-    data["values"] = temp_df.values.transpose().tolist()
-    return data
-
-
-@app.route("/api/penjamin", methods=["GET"])
-def data_jenispenjamin():
-    data = {}
-    bulan = request.args.get("bulan", type=int)
-    tahun = request.args.get("tahun", type=int)
-    kabupaten = request.args.get("kabupaten", type=str)
-    temp_df = dc1
-
-    if kabupaten is not None:
-        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
-    if tahun is not None:
-        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
-    if tahun is not None and bulan is not None:
-        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
-
-    data["index"] = temp_df["jenis_penjamin"].value_counts().index.values.tolist()
-    data["values"] = temp_df["jenis_penjamin"].value_counts().values.tolist()
-    return data
-
-@app.route("/api/instansi", methods=["GET"])
-def data_instansi():
-    # Menghapus data dengan nama_instansi_utama bernama BPJS Kesehatan
-    filtered_data = dc1[dc1["jenis_penjamin"] == "Perusahaan"]
-
-    # Menghitung ulang value_counts setelah data di-filter
-    data = {}
-    bulan = request.args.get("bulan", type=int)
-    tahun = request.args.get("tahun", type=int)
-    kabupaten = request.args.get("kabupaten", type=str)
-    temp_df = filtered_data
-
-    if kabupaten is not None:
-        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
-    if tahun is not None:
-        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
-    if tahun is not None and bulan is not None:
-        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
-
-    data["index"] = temp_df["nama_instansi_utama"].value_counts().index.values.tolist()
-    data["values"] = temp_df["nama_instansi_utama"].value_counts().values.tolist()
-
-    return data
-
-@app.route("/api/pekerjaan", methods=["GET"])
-def data_pekerjaan():
-    data = {}
-    bulan = request.args.get("bulan", type=int)
-    tahun = request.args.get("tahun", type=int)
-    kabupaten = request.args.get("kabupaten", type=str)
-    temp_df = dc1
-
-    if kabupaten is not None:
-        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
-    if tahun is not None:
-        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
-    if tahun is not None and bulan is not None:
-        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
-
-    data["index"] = temp_df["pekerjaan"].value_counts().index.values.tolist()
-    data["values"] = temp_df["pekerjaan"].value_counts().values.tolist()
     return data
 
 @app.route("/api/last-update", methods=["GET"])
@@ -606,28 +801,6 @@ def update_dataset():
             "status": "Unsupported method"
     }
 
-@app.route("/api/regis-byRujukan", methods=["GET"])
-def regis_byrujukan():
-    # data={}
-    bulan = request.args.get("bulan", type=int)
-    tahun = request.args.get("tahun", type=int)
-    kabupaten = request.args.get("kabupaten", type=str)
-    temp_df = dc1
-
-    if kabupaten is not None:
-        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
-    if tahun is not None:
-        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
-    if tahun is not None and bulan is not None:
-        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
-
-    df_regis_rujuk = temp_df.groupby(['jenis_registrasi','rujukan']).size().reset_index(name='kunjungan')
-    grouped = df_regis_rujuk.groupby('jenis_registrasi')
-
-    data = {regis: group.drop(columns='jenis_registrasi').to_dict(orient='records') for regis, group in grouped}
-
-    return data
-
 @app.route("/api/diagnosa", methods=["GET"])
 def data_diagnosa():
     data = {}
@@ -636,13 +809,13 @@ def data_diagnosa():
     tahun = request.args.get("tahun", type=int)
     jenis_registrasi = request.args.get("jenisregistrasi", type=str)
     diagnosa = request.args.get("diagnosa", type=str)
+    kabupaten = request.args.get("kabupaten", type=str)
+    timeseries = request.args.get("timeseries", type=bool)
+
     temp_df = dc1
-        
-    if tahun is not None:
-        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
-    if tahun is not None and bulan is not None:
-        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
-    
+
+    temp_df = default_filter(temp_df, kabupaten, tahun, bulan)
+
     if jenis_registrasi is not None:
         temp_df = temp_df[temp_df["jenis_registrasi"] == jenis_registrasi]
 
@@ -654,14 +827,15 @@ def data_diagnosa():
     if diagnosa is not None:
         temp_df = temp_df[temp_df["diagnosa_primer"] == diagnosa]
 
-        if tipe_data == "timeseries":
+        if timeseries:
             if tahun is None and bulan is None:
-                resample_option = "Y"
+                resample_option = "YE"
             elif tahun is not None and bulan is None:
                 resample_option = "M"
             else:
                 resample_option = "D"
-        elif tipe_data is None :
+
+        else:
             data["index"] = temp_df["diagnosa_primer"].value_counts().index.values.tolist()
             data["values"] = temp_df["diagnosa_primer"].value_counts().values.tolist()
             return data
@@ -671,16 +845,14 @@ def data_diagnosa():
     temp_df = temp_df.resample(resample_option).sum()
 
     # Hitung kategori usia yang dominan untuk setiap waktu registrasi
-    if resample_option == "Y":
-        dominan_usia = df_diagnosa.groupby(pd.Grouper(key="waktu_registrasi", freq="YE"))["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None)
+    if resample_option == "YE":
         dominan_usia_kesimpulan = df_diagnosa.groupby(df_diagnosa["waktu_registrasi"].dt.year)["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None).mode()[0]
     elif resample_option == "M":
-        dominan_usia = df_diagnosa.groupby(pd.Grouper(key="waktu_registrasi", freq="M"))["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None)
         dominan_usia_kesimpulan = df_diagnosa.groupby([df_diagnosa["waktu_registrasi"].dt.year, df_diagnosa["waktu_registrasi"].dt.month])["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None).mode()[0]
     elif resample_option == "D":
-        dominan_usia = df_diagnosa.groupby(pd.Grouper(key="waktu_registrasi", freq="D"))["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None)
         dominan_usia_kesimpulan = df_diagnosa.groupby([df_diagnosa["waktu_registrasi"].dt.year, df_diagnosa["waktu_registrasi"].dt.month, df_diagnosa["waktu_registrasi"].dt.date])["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None).mode()[0]
 
+    dominan_usia = df_diagnosa.groupby(pd.Grouper(key="waktu_registrasi", freq=resample_option))["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None)
 
     data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
     data["columns"] = temp_df.columns.tolist()
@@ -701,13 +873,13 @@ def data_departemen():
     tahun = request.args.get("tahun", type=int)
     jenis_registrasi = request.args.get("jenisregistrasi", type=str)
     departemen = request.args.get("departemen", type=str)
+    kabupaten = request.args.get("kabupaten", type=str)
+    timeseries = request.args.get("timeseries", type=bool)
+
     temp_df = dc1
-        
-    if tahun is not None:
-        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
-    if tahun is not None and bulan is not None:
-        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
-    
+
+    temp_df = default_filter(temp_df, kabupaten, tahun, bulan)
+
     if jenis_registrasi is not None:
         temp_df = temp_df[temp_df["jenis_registrasi"] == jenis_registrasi]
 
@@ -719,16 +891,18 @@ def data_departemen():
     if departemen is not None:
         temp_df = temp_df[temp_df["nama_departemen"] == departemen]
 
-        if tipe_data == "timeseries":
+        if timeseries:
             if tahun is None and bulan is None:
-                resample_option = "Y"
+                resample_option = "YE"
             elif tahun is not None and bulan is None:
                 resample_option = "M"
             else:
                 resample_option = "D"
-        elif tipe_data is None :
+
+        else:
             data["index"] = temp_df["nama_departemen"].value_counts().index.values.tolist()
             data["values"] = temp_df["nama_departemen"].value_counts().values.tolist()
+            data["columns"] = "Jumlah"
             data["indexDiagnosa"] = temp_df["diagnosa_primer"].value_counts().index.values.tolist()
             data["valuesDiagnosa"] = temp_df["diagnosa_primer"].value_counts().values.tolist()
             return data
@@ -738,22 +912,20 @@ def data_departemen():
     temp_df = temp_df.resample(resample_option).sum()
 
     # Hitung kategori usia yang dominan untuk setiap waktu registrasi
-    if resample_option == "Y":
-        dominan_usia = df_departemen.groupby(pd.Grouper(key="waktu_registrasi", freq="YE"))["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None)
+    if resample_option == "YE":
         dominan_usia_kesimpulan = df_departemen.groupby(df_departemen["waktu_registrasi"].dt.year)["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None).mode()[0]
     elif resample_option == "M":
-        dominan_usia = df_departemen.groupby(pd.Grouper(key="waktu_registrasi", freq="M"))["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None)
         dominan_usia_kesimpulan = df_departemen.groupby([df_departemen["waktu_registrasi"].dt.year, df_departemen["waktu_registrasi"].dt.month])["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None).mode()[0]
     elif resample_option == "D":
-        dominan_usia = df_departemen.groupby(pd.Grouper(key="waktu_registrasi", freq="D"))["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None)
         dominan_usia_kesimpulan = df_departemen.groupby([df_departemen["waktu_registrasi"].dt.year, df_departemen["waktu_registrasi"].dt.month, df_departemen["waktu_registrasi"].dt.date])["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None).mode()[0]
+
+    dominan_usia = df_departemen.groupby(pd.Grouper(key="waktu_registrasi", freq=resample_option))["kategori_usia"].agg(lambda x: x.mode()[0] if not x.empty else None)
 
 
     data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
     data["columns"] = temp_df.columns.tolist()
     # data["values"] = temp_df.values.transpose().tolist()
     data["values"] = temp_df.iloc[:, 0].tolist()
-
 
     data["dominant_age_category"] = dominan_usia.reindex(temp_df.index).tolist()
     data["dominant_age_category_summary"] = dominan_usia_kesimpulan
