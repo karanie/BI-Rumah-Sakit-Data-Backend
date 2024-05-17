@@ -67,7 +67,19 @@ def data_pendapatan():
     kabupaten = request.args.get("kabupaten", type=str)
     tipe_data = request.args.get("tipe_data")
 
+    #modified by chintya
+    jenis_registrasi = request.args.get("jenisregistrasi", type=str)
+    poli = request.args.get("poli", type=str)
+    diagnosa = request.args.get("diagnosa", type=str)
+    sort_arg = request.args.get("sort", type=str)
+
+    if sort_arg is None :
+        sort_arg = "pendapatan"
+
     temp_df = dc1
+
+    if jenis_registrasi is not None:
+        temp_df = temp_df[temp_df["jenis_registrasi"] == jenis_registrasi]
 
     if kabupaten is not None:
         temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
@@ -91,8 +103,8 @@ def data_pendapatan():
     ).reset_index()
 
     #  Grouping poliklinik
-    filtered_data = temp_df[temp_df["jenis_registrasi"] == "Rawat Jalan"]
-    grouped_dataPoli = filtered_data.groupby('nama_departemen').agg(
+    # filtered_data = temp_df[temp_df["jenis_registrasi"] == "Rawat Jalan"]
+    grouped_dataPoli = temp_df.groupby('nama_departemen').agg(
         pendapatan=('total_tagihan', 'sum'),
         pengeluaran=('total_semua_hpp', 'sum')
     ).reset_index()
@@ -152,17 +164,85 @@ def data_pendapatan():
         return data
 
     elif tipe_data == "pendapatanGejala":
-        grouped_data_sorted = grouped_data.sort_values(by='pendapatan', ascending=False).iloc[:10]
+        grouped_data_sorted = grouped_data.sort_values(by='pendapatan', ascending=False)
 
         data["index"] = grouped_data_sorted["diagnosa_primer"].tolist()
         data["values"] = grouped_data_sorted["pendapatan"].tolist()
         return data
 
     elif tipe_data == "pengeluaranGejala":
-        grouped_data_sorted = grouped_data.sort_values(by='pengeluaran', ascending=False).iloc[:10]
+        grouped_data_sorted = grouped_data.sort_values(by='pengeluaran', ascending=False)
 
         data["index"] = grouped_data_sorted["diagnosa_primer"].tolist()
         data["values"] = grouped_data_sorted["pengeluaran"].tolist()
+        return data
+
+    # modified by chintya
+    elif tipe_data == 'diagnosa' :
+        if diagnosa is not None : 
+            grouped_data = temp_df.groupby(['diagnosa_primer','jenis_penjamin']).agg(
+                pendapatan=('total_tagihan', 'sum'),
+                pengeluaran=('total_semua_hpp', 'sum')
+            ).reset_index()
+            
+            data['index'] = grouped_data[grouped_data['diagnosa_primer']==diagnosa]['diagnosa_primer'].unique().tolist()
+            data['jenis_penjamin'] = grouped_data[grouped_data['diagnosa_primer']==diagnosa]['jenis_penjamin'].tolist()
+            data['pendapatan'] = grouped_data[grouped_data['diagnosa_primer']==diagnosa]['pendapatan'].tolist()
+            data['pengeluaran'] = grouped_data[grouped_data['diagnosa_primer']==diagnosa]['pengeluaran'].tolist()
+
+            if jenis_registrasi == 'Rawat Inap':
+                grouped_data = temp_df.groupby(['diagnosa_primer','kelas_hak']).agg(
+                    pendapatan=('total_tagihan', 'sum'),
+                    pengeluaran=('total_semua_hpp', 'sum')
+                ).reset_index()
+
+                data['kelas_hak'] = grouped_data[grouped_data['diagnosa_primer']==diagnosa]['kelas_hak'].tolist()
+                data['pendapatanKelas'] = grouped_data[grouped_data['diagnosa_primer']==diagnosa]['pendapatan'].tolist()
+                data['pengeluaranKelas'] = grouped_data[grouped_data['diagnosa_primer']==diagnosa]['pengeluaran'].tolist()
+                data['avgLosRawatan'] = round(temp_df[temp_df['diagnosa_primer']==diagnosa]['los_rawatan'].mean())
+
+            return data
+
+        grouped_data_sorted = grouped_data.sort_values(by=sort_arg, ascending=False)
+
+        data["index"] = grouped_data_sorted["diagnosa_primer"].tolist()
+        data["pendapatan"] = grouped_data_sorted["pendapatan"].tolist()
+        data["pengeluaran"] = grouped_data_sorted["pengeluaran"].tolist()
+        return data
+
+    # modified by chintya
+    elif tipe_data == 'poliklinik':
+        if poli is not None :
+            grouped_dataPoliDiagnosa = temp_df.groupby(['nama_departemen','diagnosa_primer']).agg(
+                pendapatan=('total_tagihan', 'sum'),
+                pengeluaran=('total_semua_hpp', 'sum')
+            ).reset_index()
+
+            grouped_dataPoliDiagnosa = grouped_dataPoliDiagnosa[grouped_dataPoliDiagnosa['nama_departemen']==poli]
+            grouped_dataPoli_sorted = grouped_dataPoliDiagnosa.sort_values(by=sort_arg, ascending=False)
+
+            data["index"] = grouped_dataPoli_sorted["nama_departemen"].unique().tolist()
+            data["diagnosa"] = grouped_dataPoli_sorted["diagnosa_primer"].tolist()
+            data["pendapatanDiagnosa"] = grouped_dataPoli_sorted["pendapatan"].tolist()
+            data["pengeluaranDiagnosa"] = grouped_dataPoli_sorted["pengeluaran"].tolist()
+
+            grouped_dataPoliPenjamin = temp_df.groupby(['nama_departemen','jenis_penjamin']).agg(
+                pendapatan=('total_tagihan', 'sum'),
+                pengeluaran=('total_semua_hpp', 'sum')
+            ).reset_index()
+            grouped_dataPoliPenjamin = grouped_dataPoliPenjamin[grouped_dataPoliPenjamin['nama_departemen']==poli]
+
+            data["jenis_penjamin"] = grouped_dataPoliPenjamin["jenis_penjamin"].tolist()
+            data["pendapatan"] = grouped_dataPoliPenjamin["pendapatan"].tolist()
+            data["pengeluaran"] = grouped_dataPoliPenjamin["pengeluaran"].tolist()
+
+        else :
+            grouped_dataPoli_sorted = grouped_dataPoli.sort_values(by=sort_arg, ascending=False)
+
+            data["index"] = grouped_dataPoli_sorted["nama_departemen"].tolist()
+            data["pendapatan"] = grouped_dataPoli_sorted["pendapatan"].tolist()
+            data["pengeluaran"] = grouped_dataPoli_sorted["pengeluaran"].tolist()
+
         return data
 
     elif tipe_data == "poliklinikSortByPendapatan":
@@ -213,7 +293,6 @@ def data_kunjungan():
         temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
     if tahun is not None and bulan is not None:
         temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
-
 
     if tahun is None and bulan is None:
         resample_option = "YE"
