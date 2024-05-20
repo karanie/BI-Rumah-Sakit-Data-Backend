@@ -327,44 +327,6 @@ def data_pendapatan():
             return data
 
 
-
-            # dc1['waktu_registrasi'] = pd.to_datetime(dc1['waktu_registrasi'], format= "%Y/%m/%d")
-            # df = dc1[['waktu_registrasi', 'jenis_registrasi', 'id_registrasi']]
-            # agg_df = df.groupby(['waktu_registrasi','jenis_registrasi']).agg({'id_registrasi':'count'}).reset_index().sort_values(['jenis_registrasi','waktu_registrasi'])
-            # total_sales_df = agg_df.pivot(index='waktu_registrasi',columns='jenis_registrasi', values='id_registrasi')
-
-            # # Modelling
-            # prediction_days = request.args.get("days", type=int)
-            # forecast_start_date = max(total_sales_df.index)
-
-            # models_path = [
-            #     "models/prophet_Pengeluaran (1).pkl",
-            #     "models/prophet_Pendapatan (1).pkl",
-            # ]
-            # models = []
-            # data = []
-
-            # for i in models_path:
-            #     if os.path.isfile(i):
-            #         with open(i, "rb") as file:
-            #             models.append(pickle.load(file))
-
-            # for model in models:
-            #     future = model.make_future_dataframe(periods=30)
-            #     fcst_prophet_train = model.predict(future)
-
-            #     forecasted_df = fcst_prophet_train[fcst_prophet_train['ds']>=forecast_start_date]
-            #     forecasted_df = forecasted_df[['ds', 'yhat']]
-
-            #     data.append({
-            #         "index": forecasted_df.ds.dt.strftime("%Y-%m-%d").tolist(),
-            #         "columns": ["Prediksi Jumlah Pendapatan"],
-            #         "values": [forecasted_df.yhat.tolist()]
-            #     })
-            # return data
-
-
-
 @app.route("/api/kunjungan", methods=["GET"])
 def data_kunjungan():
     data = {}
@@ -377,7 +339,7 @@ def data_kunjungan():
     # params detailKunjungan
     timeseries = request.args.get("timeseries", type=bool)
     diagnosa = request.args.get("diagnosa", type=str)
-    jenis_registrasi = request.args.get("jenis_registrasi", type=str)
+    jenis_registrasi = request.args.get("jenisregistrasi", type=str)
 
     temp_df = dc1
 
@@ -394,6 +356,23 @@ def data_kunjungan():
         resample_option = "M"
     else:
         resample_option = "D"
+
+        temp_df = temp_df[["waktu_registrasi"]]
+        temp_df = temp_df.set_index("waktu_registrasi")
+        temp_df["Jumlah Kunjungan"] = 1
+        temp_df = temp_df.resample(resample_option).sum()
+
+        data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
+        data["columns"] = temp_df.columns.tolist()
+        data["values"] = temp_df.values.transpose().tolist()
+
+        return data
+
+    if tipe_data == "pertumbuhan":
+        if tahun is None:
+            temp_df = filter_last(temp_df, "waktu_registrasi", from_last_data = "True", months = 6)
+        if tahun is None and bulan is None:
+            resample_option = "D"
 
         temp_df = temp_df[["waktu_registrasi"]]
         temp_df = temp_df.set_index("waktu_registrasi")
