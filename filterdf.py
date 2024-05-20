@@ -55,3 +55,23 @@ def filtertime(df, timeColumn, month=None, year=None, relative_time=None, start_
     if start_date is not None and end_date is not None:
         return filter_range(df, timeColumn, start_date=start_date, end_date=end_date)
     return df
+
+def resample_opt(tahun,bulan):
+    if tahun is None and bulan is None:
+        resample_option = "YE"
+    elif tahun is not None and bulan is None:
+        resample_option = "M"
+    else:
+        resample_option = "D"
+
+    return resample_option
+
+def default_filter(temp_df,kabupaten, tahun, bulan):
+    if kabupaten is not None:
+        temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
+    if tahun is not None:
+        temp_df =  filter_in_year(temp_df,"waktu_registrasi",tahun)
+    if tahun is not None and bulan is not None:
+        temp_df = filter_in_year_month(temp_df,"waktu_registrasi",tahun,bulan)
+
+    return temp_df
