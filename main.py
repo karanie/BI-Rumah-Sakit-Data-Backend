@@ -27,6 +27,7 @@ def data_pendapatan():
     tahun = request.args.get("tahun", type=int)
     bulan = request.args.get("bulan", type=int)
     kabupaten = request.args.get("kabupaten", type=str)
+    forecast = request.args.get("forecast", type=bool)
     tipe_data = request.args.get("tipe_data")
 
     #modified by chintya
