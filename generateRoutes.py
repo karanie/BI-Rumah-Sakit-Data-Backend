@@ -60,6 +60,6 @@ def init_routes_data(app, routes):
     cache.init_app(app)
 
     for r in routes:
-        app.route(f"/api/data{r['route']}", methods=["GET"])(cache.cached(timeout=50)(r['callback']))
+        app.route(f"/api/data{r['route']}", methods=["GET"])(cache.cached(timeout=50, query_string=True)(r['callback']))
     print("Data routes initialized")
     return app
