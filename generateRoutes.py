@@ -1,5 +1,6 @@
 import json
 from flask import request
+from flask_caching import Cache
 from filterdf import filtertime, filtercols
 from getdata import get_aggregate_data, get_time_series_data, get_time_series_aggregate_data, get_exponential_smoothing_forecast_data, get_prophet_forecast_data
 
@@ -55,7 +56,10 @@ def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols
     return callback
 
 def init_routes_data(app, routes):
+    cache = Cache(config={'CACHE_TYPE': 'SimpleCache'})
+    cache.init_app(app)
+
     for r in routes:
-        app.route(f"/api/data{r['route']}", methods=["GET"])(r['callback'])
+        app.route(f"/api/data{r['route']}", methods=["GET"])(cache.cached(timeout=50)(r['callback']))
     print("Data routes initialized")
     return app
