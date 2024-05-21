@@ -1,11 +1,11 @@
 from flask import request
 from filterdf import filtertime
-from getdata import getTimeSeriesData, getExponentialSmoothingForecastData
+from getdata import getTimeSeriesData, getExponentialSmoothingForecastData, getProphetForecastData
 
 def type_is_true(value):
     return value.lower() == "true"
 
-def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols=[]):
+def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols=[], models=[]):
     def callback():
         tipe_data = request.args.get("tipe_data")
         timeseries = request.args.get("timeseries", type=type_is_true)
@@ -40,7 +40,11 @@ def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols
             return getTimeSeriesData(temp_df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, timef=timef, pivot=pivot)
 
         if forecast:
-            return getExponentialSmoothingForecastData(temp_df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, timef=timef, pivot=pivot)
+            if not models:
+                return getExponentialSmoothingForecastData(temp_df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, timef=timef, pivot=pivot)
+            else:
+                return getProphetForecastData(temp_df, timeCol, models=models, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, timef=timef, pivot=pivot)
+
 
         return data
 
