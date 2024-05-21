@@ -16,7 +16,7 @@ def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols
         relative_time = request.args.get("relative_time", type=str)
         start_date = request.args.get("start_date", type=str)
         end_date = request.args.get("end_date", type=str)
-        resample = request.args.get("resample", type=str)
+        resample = request.args.get("resample", type=str, default="D")
         timef = request.args.get("timef", type=str)
 
         #temp_df = df[[timeCol, *categoricalCols, *numericalCols, "provinsi"]]
