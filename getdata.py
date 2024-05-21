@@ -1,3 +1,5 @@
+import os
+import pickle
 import pandas as pd
 from darts.timeseries import TimeSeries
 from darts.models import ExponentialSmoothing
@@ -54,4 +56,32 @@ def getExponentialSmoothingForecastData(df, timeCol, resample="D", categoricalCo
             "values": forecast.values().transpose().tolist(),
             })
 
+    return data
+
+def getProphetForecastData(df, timeCol, models, resample="D", categoricalCols=[], numericalCols=[], timef="%Y-%m-%d", pivot=False):
+    data = {}
+
+    temp_df = getCatNumData(df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, pivot=pivot)
+
+    loaded_models = []
+    for i in models:
+        if os.path.isfile(i["path"]):
+            with open(i["path"], "rb") as file:
+                loaded_models.append({ "model": pickle.load(file), "column": i["column"] })
+        else:
+            raise Exception("Model path is not a file or doesn't exists")
+
+    data = []
+    for m in loaded_models:
+        future = m["model"].make_future_dataframe(periods=30)
+        fcst_prophet_train = m["model"].predict(future)
+
+        forecasted_df = fcst_prophet_train[fcst_prophet_train['ds'] >= temp_df.index[-1]]
+        forecasted_df = forecasted_df[['ds', 'yhat']]
+
+        data.append({
+            "index": forecasted_df.ds.dt.strftime("%Y-%m-%d").tolist(),
+            "columns": [m["column"]],
+            "values": [forecasted_df.yhat.tolist()]
+        })
     return data
