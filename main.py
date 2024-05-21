@@ -166,13 +166,13 @@ def data_pendapatan():
         data["pengeluaranLastDay"] = float(temp_df["total_semua_hpp"].sum())
         return data
 
-    elif tipe_data == "totalPendapatanBulanIni":
+    elif tipe_data == "totalPendapatan":
         if tahun is None :
             temp_df = filter_in_year_month(temp_df, "waktu_registrasi", temp_df.iloc[-1]["waktu_registrasi"].year, temp_df.iloc[-1]["waktu_registrasi"].month)
         data["value"] = temp_df["total_tagihan"].sum()
         return data
 
-    elif tipe_data == "totalPengeluaranBulanIni":
+    elif tipe_data == "totalPengeluaran":
         if tahun is None :
             temp_df = filter_in_year_month(temp_df, "waktu_registrasi", temp_df.iloc[-1]["waktu_registrasi"].year, temp_df.iloc[-1]["waktu_registrasi"].month)
         data["value"] = temp_df["total_semua_hpp"].sum()
