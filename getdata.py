@@ -37,7 +37,7 @@ def getTimeSeriesData(df, timeCol, resample="D", categoricalCols=[], numericalCo
 def getExponentialSmoothingForecastData(df, timeCol, resample="D", categoricalCols=[], numericalCols=[], timef="%Y-%m-%d", pivot=False):
     data = {}
 
-    temp_df = getCatNumData(df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, timef=timef, pivot=pivot)
+    temp_df = getCatNumData(df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, pivot=pivot)
 
     data = []
     for i in temp_df.columns:
@@ -49,7 +49,7 @@ def getExponentialSmoothingForecastData(df, timeCol, resample="D", categoricalCo
 
         forecast = model.predict(90)
         data.append({
-            "index": forecast.time_index.strftime("%Y-%m-%d").tolist(),
+            "index": forecast.time_index.strftime(timef).tolist(),
             "columns": forecast.columns.tolist(),
             "values": forecast.values().transpose().tolist(),
             })
