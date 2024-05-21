@@ -12,6 +12,7 @@ numpy = "*"
 flask-cors = "*"
 colorama = "*"
 pgzip = "*"
+prophet = "*"
 
 [dev-packages]
 
