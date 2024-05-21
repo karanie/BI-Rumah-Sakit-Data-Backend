@@ -61,5 +61,11 @@ def init_routes_data(app, routes):
 
     for r in routes:
         app.route(f"/api/data{r['route']}", methods=["GET"])(cache.cached(timeout=50, query_string=True)(r['callback']))
+
+    @app.route("/api/data/clearcache", methods=["DELETE"])
+    def clear_data_cache():
+        cache.clear()
+        return "Success"
+
     print("Data routes initialized")
     return app
