@@ -17,6 +17,7 @@ def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols
         start_date = request.args.get("start_date", type=str)
         end_date = request.args.get("end_date", type=str)
         resample = request.args.get("resample", type=str)
+        timef = request.args.get("timef", type=str)
 
         #temp_df = df[[timeCol, *categoricalCols, *numericalCols, "provinsi"]]
         #temp_df = temp_df.loc[temp_df["provinsi"] == "RIAU"]
@@ -36,10 +37,10 @@ def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols
             return data
 
         if timeseries:
-            return getTimeSeriesData(temp_df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, pivot=pivot)
+            return getTimeSeriesData(temp_df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, timef=timef, pivot=pivot)
 
         if forecast:
-            return getExponentialSmoothingForecastData(temp_df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, pivot=pivot)
+            return getExponentialSmoothingForecastData(temp_df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, timef=timef, pivot=pivot)
 
         return data
 
