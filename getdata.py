@@ -4,7 +4,7 @@ import pandas as pd
 from darts.timeseries import TimeSeries
 from darts.models import ExponentialSmoothing
 
-def getCatNumData(df, timeCol, resample="D", categoricalCols=[], numericalCols=[], pivot=False):
+def get_data(df, timeCol, resample="D", categoricalCols=[], numericalCols=[], pivot=False):
     if not categoricalCols and not numericalCols:
         raise Exception("Either categoricalCols or numericalCols is required")
 
@@ -25,10 +25,10 @@ def getCatNumData(df, timeCol, resample="D", categoricalCols=[], numericalCols=[
     temp_df = temp_df.resample(resample).sum()
     return temp_df
 
-def getTimeSeriesData(df, timeCol, resample="D", categoricalCols=[], numericalCols=[], timef="%Y-%m-%d", pivot=False):
+def get_time_series_data(df, timeCol, resample="D", categoricalCols=[], numericalCols=[], timef="%Y-%m-%d", pivot=False):
     data = {}
 
-    temp_df = getCatNumData(df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, pivot=pivot)
+    temp_df = get_data(df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, pivot=pivot)
 
     data["index"] = temp_df.index.strftime(timef).tolist()
     data["columns"] = temp_df.columns.tolist()
@@ -36,10 +36,10 @@ def getTimeSeriesData(df, timeCol, resample="D", categoricalCols=[], numericalCo
 
     return data
 
-def getExponentialSmoothingForecastData(df, timeCol, resample="D", categoricalCols=[], numericalCols=[], timef="%Y-%m-%d", pivot=False):
+def get_exponential_smoothing_forecast_data(df, timeCol, resample="D", categoricalCols=[], numericalCols=[], timef="%Y-%m-%d", pivot=False):
     data = {}
 
-    temp_df = getCatNumData(df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, pivot=pivot)
+    temp_df = get_data(df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, pivot=pivot)
 
     data = []
     for i in temp_df.columns:
@@ -58,10 +58,10 @@ def getExponentialSmoothingForecastData(df, timeCol, resample="D", categoricalCo
 
     return data
 
-def getProphetForecastData(df, timeCol, models, resample="D", categoricalCols=[], numericalCols=[], timef="%Y-%m-%d", pivot=False):
+def get_prophet_forecast_data(df, timeCol, models, resample="D", categoricalCols=[], numericalCols=[], timef="%Y-%m-%d", pivot=False):
     data = {}
 
-    temp_df = getCatNumData(df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, pivot=pivot)
+    temp_df = get_data(df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, pivot=pivot)
 
     loaded_models = []
     for i in models:
