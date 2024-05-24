@@ -1,6 +1,6 @@
 from flask import request
 from filterdf import filtertime
-from getdata import get_aggregate_data, get_time_series_data, get_exponential_smoothing_forecast_data, get_prophet_forecast_data
+from getdata import get_aggregate_data, get_time_series_data, get_time_series_aggregate_data, get_exponential_smoothing_forecast_data, get_prophet_forecast_data
 
 def type_is_true(value):
     return value.lower() == "true"
@@ -25,6 +25,9 @@ def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols
         temp_df = filtertime(temp_df, timeCol, month=bulan, year=tahun, relative_time=relative_time, start_date=start_date, end_date=end_date)
 
         data = {}
+
+        if aggregate and timeseries:
+            return get_time_series_aggregate_data(temp_df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, pivot=pivot, agg=agg)
 
         if aggregate:
             return get_aggregate_data(temp_df, categoricalCols=categoricalCols, numericalCols=numericalCols, pivot=pivot, agg=agg)

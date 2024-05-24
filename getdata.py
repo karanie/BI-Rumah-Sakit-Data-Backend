@@ -67,6 +67,17 @@ def get_time_series_data(df, timeCol, resample="D", categoricalCols=[], numerica
 
     return data
 
+def get_time_series_aggregate_data(df, timeCol, resample="", categoricalCols=[], numericalCols=[], pivot=False, agg="sum"):
+    data = {}
+
+    temp_df = get_time_series_df(df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, pivot=pivot, agg=agg)
+    temp_df = temp_df.agg(get_aggr_func(agg))
+
+    data["index"] = temp_df.index.tolist()
+    data["values"] = temp_df.fillna(0).values.transpose().tolist()
+
+    return data
+
 def get_exponential_smoothing_forecast_data(df, timeCol, resample="D", categoricalCols=[], numericalCols=[], timef="%Y-%m-%d", pivot=False, agg="sum"):
     data = {}
 
