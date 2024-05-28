@@ -1,3 +1,4 @@
+import functools
 import pandas as pd
 
 def filter_in_year(df, column, year):
@@ -55,6 +56,37 @@ def filtertime(df, timeColumn, month=None, year=None, relative_time=None, start_
     if start_date is not None and end_date is not None:
         return filter_range(df, timeColumn, start_date=start_date, end_date=end_date)
     return df
+
+# filters schema (as far as think):
+# string | number | string[] | number[]
+# | { equals?: string | number, less?: string | number, more?: string | number, isin?: (string | number)[] }
+def filtercols(df, filters):
+    if not filters:
+        return df
+
+    def get_mask(df, column, operation):
+        if isinstance(operation, dict):
+            if "equal" in operation:
+                print(df[column] == operation["equals"])
+                return df[column] == operation["equals"]
+            if "less" in operation:
+                return df[column] < operation["less"]
+            if "lessEqual" in operation:
+                return df[column] <= operation["lessEqual"]
+            if "more" in operation:
+                return df[column] > operation["more"]
+            if "moreEqual" in operation:
+                return df[column] >= operation["moreEqual"]
+            if "isin" in operation:
+                return df[column].isin(operation["isin"])
+        else:
+            return df[column] == operation
+
+    mask = functools.reduce(
+        lambda a, b: a & b,
+        [ get_mask(df, i, filters[i]) for i in filters ]
+    )
+    return df.loc[mask]
 
 def resample_opt(tahun,bulan):
     if tahun is None and bulan is None:
