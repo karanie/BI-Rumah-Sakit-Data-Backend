@@ -63,7 +63,7 @@ def get_time_series_data(df, timeCol, resample="D", categoricalCols=[], numerica
 
     data["index"] = temp_df.index.strftime(timef).tolist()
     data["columns"] = temp_df.columns.tolist()
-    data["values"] = temp_df.values.transpose().tolist()
+    data["values"] = temp_df.fillna(0).values.transpose().tolist()
 
     return data
 
