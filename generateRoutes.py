@@ -1,5 +1,6 @@
+import json
 from flask import request
-from filterdf import filtertime
+from filterdf import filtertime, filtercols
 from getdata import get_aggregate_data, get_time_series_data, get_time_series_aggregate_data, get_exponential_smoothing_forecast_data, get_prophet_forecast_data
 
 def type_is_true(value):
@@ -12,6 +13,7 @@ def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols
         timeseries = request.args.get("timeseries", type=type_is_true)
         forecast = request.args.get("forecast", type=type_is_true)
         pivot = request.args.get("pivot", type=bool)
+        filters = json.loads(request.args.get("filters", type=str, default="{}"))
         tahun = request.args.get("tahun", type=int)
         bulan = request.args.get("bulan", type=int)
         relative_time = request.args.get("relative_time", type=str)
@@ -23,6 +25,7 @@ def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols
 
         temp_df = df[[timeCol, *categoricalCols, *numericalCols]]
         temp_df = filtertime(temp_df, timeCol, month=bulan, year=tahun, relative_time=relative_time, start_date=start_date, end_date=end_date)
+        temp_df = filtercols(temp_df, filters)
 
         data = {}
 
