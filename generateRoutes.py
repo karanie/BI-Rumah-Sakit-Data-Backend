@@ -23,9 +23,10 @@ def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols
         agg = request.args.get("agg", type=str, default="sum")
         timef = request.args.get("timef", type=str)
 
-        temp_df = df[[timeCol, *categoricalCols, *numericalCols]]
+        temp_df = df[[timeCol, *{*categoricalCols, *numericalCols, *filters.keys()}]]
         temp_df = filtertime(temp_df, timeCol, month=bulan, year=tahun, relative_time=relative_time, start_date=start_date, end_date=end_date)
         temp_df = filtercols(temp_df, filters)
+        temp_df = temp_df[[timeCol, *categoricalCols, *numericalCols]]
 
         data = {}
 
