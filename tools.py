@@ -8,6 +8,7 @@ def read_dataset_pickle(files, save_as_pickle=True):
     for i in files:
         file_list = [
                 {"ext": ".pkl.gz"},
+                {"ext": ".csv.gz"},
                 {"ext": ".csv"},
                 {"ext": ".xlsx"},
                 ]
@@ -37,7 +38,7 @@ def read_dataset_pickle(files, save_as_pickle=True):
     return out
 
 def read_dataset(path):
-    ext = path.rsplit('.', 1)[1].lower()
+    ext = path.split('.', 1)[1].lower()
 
     cols = ["id_registrasi",
             "id_pasien",
@@ -84,6 +85,7 @@ def read_dataset(path):
 
     read_map = {
             "csv": pd.read_csv,
+            "csv.gz": pd.read_csv,
             "xlsx": pd.read_excel,
             }
     return read_map[ext](path, usecols=cols, dtype=dtype, parse_dates=parse_dates)
