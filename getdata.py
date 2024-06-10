@@ -40,22 +40,15 @@ def get_aggregate_data(df, resample="", categoricalCols=[], numericalCols=[], pi
 
     temp_df = df[[*categoricalCols, *numericalCols]]
     if categoricalCols and numericalCols and not pivot:
-        if len(categoricalCols) == 1:
-            temp_df_cat = temp_df[categoricalCols[0]].value_counts().sort_index()
-        else:
-            temp_df_cat = temp_df[[*categoricalCols]].groupby([temp_df.index] + categoricalCols).size().unstack(fill_value=0).agg(get_aggr_func(agg))
+        temp_df_cat = temp_df[[*categoricalCols]].groupby(categoricalCols, observed=True).size()
         #temp_df_cat = temp_df[[*categoricalCols]].groupby([temp_df.index] + categoricalCols).size().unstack(fill_value=0).reset_index()
         temp_df_num = temp_df[[*numericalCols]].reset_index()
         temp_df = temp_df_cat.merge(temp_df_num, left_index=True, right_index=True).agg(get_aggr_func(agg))
     elif categoricalCols and numericalCols and pivot:
         temp_df = temp_df.pivot_table(columns=categoricalCols, values=(numericalCols if len(numericalCols) > 1 else numericalCols[0]), fill_value=0).agg(get_aggr_func(agg))
     elif categoricalCols and not numericalCols:
-        if len(categoricalCols) == 1:
-            temp_df = temp_df[categoricalCols[0]].value_counts().sort_index()
-        else:
-            temp_df = temp_df[[*categoricalCols]].groupby([temp_df.index] + categoricalCols).size().unstack(fill_value=0).agg(get_aggr_func(agg))
+        temp_df = temp_df[[*categoricalCols]].groupby(categoricalCols, observed=True).size().sort_values(ascending=False)
     else:
-
         temp_df = temp_df.agg(get_aggr_func(agg))
 
     data["index"] = temp_df.index.tolist()
