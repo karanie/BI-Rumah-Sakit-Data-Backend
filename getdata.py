@@ -19,13 +19,13 @@ def get_time_series_df(df, timeCol=None, resample="D", categoricalCols=[], numer
     temp_df = df[[*categoricalCols, *numericalCols, timeCol]].set_index(timeCol)
 
     if categoricalCols and numericalCols and not pivot:
-        temp_df_cat = temp_df[[*categoricalCols]].groupby([temp_df.index] + categoricalCols).size().unstack(fill_value=0)
+        temp_df_cat = temp_df[[*categoricalCols]].groupby([temp_df.index] + categoricalCols, observed=True).size().unstack(fill_value=0)
         temp_df_num = temp_df[[*numericalCols]]
         temp_df = temp_df_cat.merge(temp_df_num, left_index=True, right_index=True)
     elif categoricalCols and numericalCols and pivot:
         temp_df = temp_df.pivot_table(index=[timeCol], columns=categoricalCols, values=(numericalCols if len(numericalCols) > 1 else numericalCols[0]), fill_value=0)
     elif categoricalCols and not numericalCols:
-        temp_df = temp_df[[*categoricalCols]].groupby([temp_df.index] + categoricalCols).size().unstack(fill_value=0)
+        temp_df = temp_df[[*categoricalCols]].groupby([temp_df.index] + categoricalCols, observed=True).size().unstack(fill_value=0)
     else:
         temp_df = temp_df[[*numericalCols]]
 
