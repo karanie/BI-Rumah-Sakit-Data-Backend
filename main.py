@@ -21,6 +21,74 @@ CORS(app)
 dc1 = read_dataset_pickle(["dataset/DC1"])[0]
 dc1 = preprocess_dataset(dc1)
 
+from generateRoutes import generate_route_callback, init_routes_data
+
+def filterDemografiInRiau(df):
+    return df.loc[df["provinsi"] == "RIAU"]
+
+routes = [
+    {
+        "route": "/demografi",
+        "callback": generate_route_callback(
+            name="demografi",
+            df=dc1,
+            timeCol="waktu_registrasi",
+            categoricalCols=["kabupaten"],
+            preprocess=filterDemografiInRiau,
+        )
+    },
+    {
+        "route": "/jenisregis",
+        "callback": generate_route_callback(
+            name="jenisregis",
+            df=dc1,
+            timeCol="waktu_registrasi",
+            categoricalCols=["jenis_registrasi"]
+        )
+    },
+    {
+        "route": "/pendapatan",
+        "callback": generate_route_callback(
+            name="pendapatan",
+            df=dc1,
+            timeCol="waktu_registrasi",
+            numericalCols=["total_tagihan", "total_semua_hpp"]
+        )
+    },
+    {
+        "route": "/pendapatan/jenisregis",
+        "callback": generate_route_callback(
+            name="pendapatanJenisregis",
+            df=dc1,
+            timeCol="waktu_registrasi",
+            categoricalCols=["jenis_registrasi"],
+            numericalCols=["total_tagihan"],
+            models=[
+                { "path": "models/pendapatan/prophet_pendapatan_IGD.pkl", "column": "IGD" },
+                { "path": "models/pendapatan/prophet_pendapatan_OTC.pkl", "column": "OTC" },
+                { "path": "models/pendapatan/prophet_pendapatan_Rawat Jalan.pkl", "column": "Rawat Jalan" },
+                { "path": "models/pendapatan/prophet_pendapatan_Rawat Inap.pkl", "column": "Rawat Inap" },
+            ]
+        )
+    },
+    {
+        "route": "/kunjungan/jenisregis",
+        "callback": generate_route_callback(
+            name="kunjunganJenisregis",
+            df=dc1,
+            timeCol="waktu_registrasi",
+            categoricalCols=["jenis_registrasi"],
+            models=[
+                { "path": "models/kunjungan/prophet_kunjungan_model_IGD.pkl", "column": "IGD" },
+                { "path": "models/kunjungan/prophet_kunjungan_model_OTC.pkl", "column": "OTC" },
+                { "path": "models/kunjungan/prophet_kunjungan_model_Rawat Jalan.pkl", "column": "Rawat Jalan" },
+                { "path": "models/kunjungan/prophet_kunjungan_model_Rawat Inap.pkl", "column": "Rawat Inap" },
+            ]
+        )
+    },
+]
+app = init_routes_data(app, routes)
+
 @app.route("/api/pendapatan", methods=["GET"])
 def data_pendapatan():
     data = {}
