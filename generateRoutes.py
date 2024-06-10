@@ -7,7 +7,7 @@ from getdata import get_aggregate_data, get_time_series_data, get_time_series_ag
 def type_is_true(value):
     return value.lower() == "true"
 
-def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols=[], models=[]):
+def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols=[], models=[], preprocess=None, postprocess=None):
     def callback():
         tipe_data = request.args.get("tipe_data")
         aggregate = request.args.get("aggregate", type=type_is_true)
@@ -24,7 +24,11 @@ def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols
         agg = request.args.get("agg", type=str, default="sum")
         timef = request.args.get("timef", type=str)
 
-        temp_df = df[[timeCol, *{*categoricalCols, *numericalCols, *filters.keys()}]]
+        temp_df = df
+        if preprocess:
+            temp_df = preprocess(temp_df)
+
+        temp_df = temp_df[[timeCol, *{*categoricalCols, *numericalCols, *filters.keys()}]]
         temp_df = filtertime(temp_df, timeCol, month=bulan, year=tahun, relative_time=relative_time, start_date=start_date, end_date=end_date)
         temp_df = filtercols(temp_df, filters)
         temp_df = temp_df[[timeCol, *categoricalCols, *numericalCols]]
@@ -47,6 +51,10 @@ def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols
                 return get_prophet_forecast_data(temp_df, timeCol, models=models, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, timef=timef, pivot=pivot, agg=agg)
 
         temp_df = temp_df.set_index(timeCol)
+
+        if postprocess:
+            temp_df = postprocess(temp_df)
+
         data["index"] = temp_df.index.strftime(timef).tolist()
         data["columns"] = temp_df.columns.tolist()
         data["values"] = temp_df.fillna(0).values.transpose().tolist()
