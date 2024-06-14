@@ -647,8 +647,8 @@ def data_kunjungan():
                         resample_option = "D"
 
                 else:
-                    data["index"] = temp_df["diagnosa_primer"].value_counts().index.values.tolist()
-                    data["values"] = temp_df["diagnosa_primer"].value_counts().values.tolist()
+                    data["index"] = temp_df["diagnosa_primer"].value_counts().index.values.tolist()[0]
+                    data["values"] = temp_df["diagnosa_primer"].value_counts().values.tolist()[0]
                     return data
 
             df_diagnosa = temp_df[temp_df["diagnosa_primer"] == diagnosa]
