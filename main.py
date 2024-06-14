@@ -375,24 +375,63 @@ def data_pendapatan():
             return data
 
         else:
-            temp_df = temp_df[["waktu_registrasi", "total_tagihan", "total_semua_hpp"]]
-            temp_df = temp_df.set_index("waktu_registrasi")
-            temp_df = temp_df.resample("D").sum()
+            # temp_df = temp_df[["waktu_registrasi", "total_tagihan", "total_semua_hpp"]]
+            # temp_df = temp_df.set_index("waktu_registrasi")
+            # temp_df = temp_df.resample("D").sum()
 
+            # data = []
+            # for i in temp_df.columns:
+            #     ts = TimeSeries.from_dataframe(temp_df[[i]])
+            #     train, val = ts[:-30], ts[-30:]
+
+            #     model = ExponentialSmoothing()
+            #     model.fit(train)
+
+            #     forecast = model.predict(60)
+            #     data.append({
+            #         "index": forecast.time_index.strftime("%Y-%m-%d").tolist(),
+            #         "columns": forecast.columns.tolist(),
+            #         "values": forecast.values().transpose().tolist(),
+            #         })
+            # return data
+             # Preprocess
+            dc1['waktu_registrasi'] = pd.to_datetime(dc1['waktu_registrasi'], format= "%Y/%m/%d")
+            df = dc1[['waktu_registrasi', 'jenis_registrasi', 'id_registrasi']]
+            agg_df = df.groupby(['waktu_registrasi','jenis_registrasi']).agg({'id_registrasi':'count'}).reset_index().sort_values(['jenis_registrasi','waktu_registrasi'])
+            total_sales_df = agg_df.pivot(index='waktu_registrasi',columns='jenis_registrasi', values='id_registrasi')
+
+            # Modelling
+            prediction_days = request.args.get("days", type=int)
+            forecast_start_date = max(total_sales_df.index)
+
+            models_path = [
+                "models/prophet_pendapatan_Pendapatan.pkl",
+                "models/prophet_pendapatan_Pengeluaran.pkl",
+            ]
+            column_names = [
+                "total_tagihan",
+                "total_semua_hpp"
+            ]
+            models = []
             data = []
-            for i in temp_df.columns:
-                ts = TimeSeries.from_dataframe(temp_df[[i]])
-                train, val = ts[:-30], ts[-30:]
 
-                model = ExponentialSmoothing()
-                model.fit(train)
+            for i in models_path:
+                if os.path.isfile(i):
+                    with open(i, "rb") as file:
+                        models.append(pickle.load(file))
 
-                forecast = model.predict(60)
+            for i, model in enumerate(models):
+                future = model.make_future_dataframe(periods=30)
+                fcst_prophet_train = model.predict(future)
+
+                forecasted_df = fcst_prophet_train[fcst_prophet_train['ds']>=forecast_start_date]
+                forecasted_df = forecasted_df[['ds', 'yhat']]
+
                 data.append({
-                    "index": forecast.time_index.strftime("%Y-%m-%d").tolist(),
-                    "columns": forecast.columns.tolist(),
-                    "values": forecast.values().transpose().tolist(),
-                    })
+                    "index": forecasted_df.ds.dt.strftime("%Y-%m-%d").tolist(),
+                    "columns": [column_names[i]],
+                    "values": [forecasted_df.yhat.tolist()]
+                })
             return data
 
 
