@@ -2,6 +2,9 @@ import pandas as pd
 import os
 import pickle
 import pgzip
+import ctypes
+
+malloc_trim = ctypes.CDLL("libc.so.6").malloc_trim
 
 def read_dataset_pickle(files, save_as_pickle=True):
     out = []
