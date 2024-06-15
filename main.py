@@ -8,8 +8,6 @@ import pandas as pd
 from tools import read_dataset_pickle, save_dataset_as_pickle, read_dataset, malloc_trim
 from preprocess import preprocess_dataset
 from filterdf import filter_in_year, filter_in_year_month,filter_last,resample_opt,default_filter
-from darts.timeseries import TimeSeries
-from darts.models import ExponentialSmoothing
 
 ALLOWED_EXTENSIONS = { "csv", "xlsx" }
 UPLOAD_FOLDER = "dataset/"
@@ -380,25 +378,6 @@ def data_pendapatan():
             return data
 
         else:
-            # temp_df = temp_df[["waktu_registrasi", "total_tagihan", "total_semua_hpp"]]
-            # temp_df = temp_df.set_index("waktu_registrasi")
-            # temp_df = temp_df.resample("D").sum()
-
-            # data = []
-            # for i in temp_df.columns:
-            #     ts = TimeSeries.from_dataframe(temp_df[[i]])
-            #     train, val = ts[:-30], ts[-30:]
-
-            #     model = ExponentialSmoothing()
-            #     model.fit(train)
-
-            #     forecast = model.predict(60)
-            #     data.append({
-            #         "index": forecast.time_index.strftime("%Y-%m-%d").tolist(),
-            #         "columns": forecast.columns.tolist(),
-            #         "values": forecast.values().transpose().tolist(),
-            #         })
-            # return data
              # Preprocess
             dc1['waktu_registrasi'] = pd.to_datetime(dc1['waktu_registrasi'], format= "%Y/%m/%d")
             df = dc1[['waktu_registrasi', 'jenis_registrasi', 'id_registrasi']]
@@ -852,33 +831,6 @@ def data_demografi():
         data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
         data["columns"] = temp_df.columns.tolist()
         data["values"] = temp_df.values.transpose().tolist()
-        return data
-    elif tipe_data == "forecast":
-        if tahun is None and bulan is None:
-            temp_df = dc1[["waktu_registrasi", "kabupaten"]]
-            temp_df = filter_in_year(temp_df, "waktu_registrasi", 2021)
-        else:
-            temp_df = temp_df[["waktu_registrasi", "kabupaten"]]
-
-        temp_df = temp_df[["kabupaten", "waktu_registrasi"]]
-        temp_df = pd.crosstab(temp_df["waktu_registrasi"], temp_df["kabupaten"])
-        resample_option = "D"
-        temp_df = temp_df.resample(resample_option).sum()
-
-        data = []
-        for i in temp_df.columns:
-            ts = TimeSeries.from_dataframe(temp_df[[i]])
-            train, val = ts[:-30], ts[-30:]
-
-            model = ExponentialSmoothing()
-            model.fit(train)
-
-            forecast = model.predict(90)
-            data.append({
-                "index": forecast.time_index.strftime("%Y-%m-%d").tolist(),
-                "columns": forecast.columns.tolist(),
-                "values": forecast.values().transpose().tolist(),
-                })
         return data
 
     return data
