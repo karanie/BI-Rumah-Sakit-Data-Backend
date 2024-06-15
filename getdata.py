@@ -2,8 +2,6 @@ import os
 import pickle
 import numpy as np
 import pandas as pd
-from darts.timeseries import TimeSeries
-from darts.models import ExponentialSmoothing
 
 def get_aggr_func(aggr_str):
     map = {
@@ -79,6 +77,9 @@ def get_time_series_aggregate_data(df, timeCol, resample="", categoricalCols=[],
     return data
 
 def get_exponential_smoothing_forecast_data(df, timeCol, resample="D", categoricalCols=[], numericalCols=[], timef="%Y-%m-%d", pivot=False, agg="sum"):
+    from darts.timeseries import TimeSeries
+    from darts.models import ExponentialSmoothing
+
     data = {}
 
     temp_df = get_time_series_df(df, timeCol, resample=resample, categoricalCols=categoricalCols, numericalCols=numericalCols, pivot=pivot, agg=agg)
@@ -98,6 +99,8 @@ def get_exponential_smoothing_forecast_data(df, timeCol, resample="D", categoric
             "values": forecast.values().transpose().tolist(),
             })
 
+    del TimeSeries
+    del ExponentialSmoothing
     return data
 
 def get_prophet_forecast_data(df, timeCol, models, resample="D", categoricalCols=[], numericalCols=[], timef="%Y-%m-%d", pivot=False, agg="sum"):
