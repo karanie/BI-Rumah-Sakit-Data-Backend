@@ -1,6 +1,7 @@
 import json
 import os.path, time
 import pickle
+import gc
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
@@ -22,6 +23,7 @@ dc1 = preprocess_dataset(dc1)
 @app.after_request
 def malloc_trim_after_request(res):
     malloc_trim(0)
+    gc.collect()
     return res
 
 from generateRoutes import generate_route_callback, init_routes_data
