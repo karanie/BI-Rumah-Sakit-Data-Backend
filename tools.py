@@ -61,6 +61,8 @@ def read_dataset(path):
             "tglPulang",
             "usia",
             "kategori_usia",
+            "kelas_hak",
+            "los_rawatan",
             "pekerjaan",
     ]
     dtype = {
@@ -75,6 +77,7 @@ def read_dataset(path):
             "diagnosa_primer": "category",
             "nama_instansi_utama": "category",
             "kategori_usia": "category",
+            "kelas_hak": "category",
             "pekerjaan": "category",
     }
     parse_dates = [
