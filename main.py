@@ -405,8 +405,8 @@ def data_pendapatan():
             forecast_start_date = max(total_sales_df.index)
 
             models_path = [
-                "models/prophet_pendapatan_Pendapatan.pkl",
-                "models/prophet_pendapatan_Pengeluaran.pkl",
+                "models/pendapatan/prophet_pendapatan_Pendapatan.pkl",
+                "models/pendapatan/prophet_pendapatan_Pengeluaran.pkl",
             ]
             column_names = [
                 "total_tagihan",
