@@ -511,7 +511,7 @@ def data_kunjungan():
                 resample_option = "D"
 
             temp_df = temp_df[["waktu_registrasi","jenis_registrasi"]]
-            temp_df = pd.crosstab(temp_df["waktu_registrasi"],temp_df["jenis_registrasi"])
+            temp_df = temp_df.groupby([temp_df["waktu_registrasi"]] + ["jenis_registrasi"]).size().unstack(fill_value=0)
             temp_df = temp_df.resample(resample_option).sum()
 
             data["index"] = temp_df.index.strftime("%Y-%m-%d").tolist()
