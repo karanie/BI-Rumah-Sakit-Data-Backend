@@ -5,7 +5,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import pandas as pd
-from tools import read_dataset_pickle, save_dataset_as_pickle, read_dataset
+from tools import read_dataset_pickle, save_dataset_as_pickle, read_dataset, malloc_trim
 from preprocess import preprocess_dataset
 from filterdf import filter_in_year, filter_in_year_month,filter_last,resample_opt,default_filter
 from darts.timeseries import TimeSeries
@@ -20,6 +20,11 @@ CORS(app)
 
 dc1 = read_dataset_pickle(["dataset/DC1"])[0]
 dc1 = preprocess_dataset(dc1)
+
+@app.after_request
+def malloc_trim_after_request(res):
+    malloc_trim(0)
+    return res
 
 from generateRoutes import generate_route_callback, init_routes_data
 
