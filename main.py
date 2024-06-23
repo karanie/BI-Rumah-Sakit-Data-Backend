@@ -11,13 +11,13 @@ from preprocess import preprocess_dataset
 from filterdf import filter_in_year, filter_in_year_month,filter_last,resample_opt,default_filter
 
 ALLOWED_EXTENSIONS = { "csv", "xlsx" }
-UPLOAD_FOLDER = "dataset/"
+UPLOAD_FOLDER = "data/dataset/uploaded/"
 
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 CORS(app)
 
-dc1 = read_dataset_pickle(["dataset/DC1"])[0]
+dc1 = read_dataset_pickle(["data/dataset/DC1"])[0]
 dc1 = preprocess_dataset(dc1)
 
 @app.after_request
@@ -69,10 +69,10 @@ routes = [
             categoricalCols=["jenis_registrasi"],
             numericalCols=["total_tagihan"],
             models=[
-                { "path": "models/pendapatan/prophet_pendapatan_IGD.pkl", "column": "IGD" },
-                { "path": "models/pendapatan/prophet_pendapatan_OTC.pkl", "column": "OTC" },
-                { "path": "models/pendapatan/prophet_pendapatan_Rawat Jalan.pkl", "column": "Rawat Jalan" },
-                { "path": "models/pendapatan/prophet_pendapatan_Rawat Inap.pkl", "column": "Rawat Inap" },
+                { "path": "data/models/pendapatan/prophet_pendapatan_IGD.pkl", "column": "IGD" },
+                { "path": "data/models/pendapatan/prophet_pendapatan_OTC.pkl", "column": "OTC" },
+                { "path": "data/models/pendapatan/prophet_pendapatan_Rawat Jalan.pkl", "column": "Rawat Jalan" },
+                { "path": "data/models/pendapatan/prophet_pendapatan_Rawat Inap.pkl", "column": "Rawat Inap" },
             ]
         )
     },
@@ -84,10 +84,10 @@ routes = [
             timeCol="waktu_registrasi",
             categoricalCols=["jenis_registrasi"],
             models=[
-                { "path": "models/kunjungan/prophet_kunjungan_model_IGD.pkl", "column": "IGD" },
-                { "path": "models/kunjungan/prophet_kunjungan_model_OTC.pkl", "column": "OTC" },
-                { "path": "models/kunjungan/prophet_kunjungan_model_Rawat Jalan.pkl", "column": "Rawat Jalan" },
-                { "path": "models/kunjungan/prophet_kunjungan_model_Rawat Inap.pkl", "column": "Rawat Inap" },
+                { "path": "data/models/kunjungan/prophet_kunjungan_model_IGD.pkl", "column": "IGD" },
+                { "path": "data/models/kunjungan/prophet_kunjungan_model_OTC.pkl", "column": "OTC" },
+                { "path": "data/models/kunjungan/prophet_kunjungan_model_Rawat Jalan.pkl", "column": "Rawat Jalan" },
+                { "path": "data/models/kunjungan/prophet_kunjungan_model_Rawat Inap.pkl", "column": "Rawat Inap" },
             ]
         )
     },
@@ -176,10 +176,10 @@ def data_pendapatan():
             forecast_start_date = max(total_sales_df.index)
 
             models_path = [
-                "models/pendapatan/prophet_pendapatan_IGD.pkl",
-                "models/pendapatan/prophet_pendapatan_OTC.pkl",
-                "models/pendapatan/prophet_pendapatan_Rawat Jalan.pkl",
-                "models/pendapatan/prophet_pendapatan_Rawat Inap.pkl",
+                "data/models/pendapatan/prophet_pendapatan_IGD.pkl",
+                "data/models/pendapatan/prophet_pendapatan_OTC.pkl",
+                "data/models/pendapatan/prophet_pendapatan_Rawat Jalan.pkl",
+                "data/models/pendapatan/prophet_pendapatan_Rawat Inap.pkl",
             ]
             models = []
             data = []
@@ -391,8 +391,8 @@ def data_pendapatan():
             forecast_start_date = max(total_sales_df.index)
 
             models_path = [
-                "models/pendapatan/prophet_pendapatan_Pendapatan.pkl",
-                "models/pendapatan/prophet_pendapatan_Pengeluaran.pkl",
+                "data/models/pendapatan/prophet_pendapatan_Pendapatan.pkl",
+                "data/models/pendapatan/prophet_pendapatan_Pengeluaran.pkl",
             ]
             column_names = [
                 "total_tagihan",
@@ -531,10 +531,10 @@ def data_kunjungan():
             forecast_start_date = max(total_sales_df.index)
 
             models_path = [
-                "models/kunjungan/prophet_kunjungan_model_IGD.pkl",
-                "models/kunjungan/prophet_kunjungan_model_OTC.pkl",
-                "models/kunjungan/prophet_kunjungan_model_Rawat Jalan.pkl",
-                "models/kunjungan/prophet_kunjungan_model_Rawat Inap.pkl",
+                "data/models/kunjungan/prophet_kunjungan_model_IGD.pkl",
+                "data/models/kunjungan/prophet_kunjungan_model_OTC.pkl",
+                "data/models/kunjungan/prophet_kunjungan_model_Rawat Jalan.pkl",
+                "data/models/kunjungan/prophet_kunjungan_model_Rawat Inap.pkl",
             ]
             models = []
             data = []
