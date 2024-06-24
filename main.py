@@ -17,7 +17,8 @@ app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 CORS(app)
 
-dc1 = read_dataset_pickle(["data/dataset/DC1"])[0]
+dataset_path = "data/dataset/DC1"
+dc1 = read_dataset_pickle([dataset_path])[0]
 dc1 = preprocess_dataset(dc1)
 
 @app.after_request
@@ -840,8 +841,8 @@ def data_demografi():
 @app.route("/api/last-update", methods=["GET"])
 def last_update():
     data = {}
-    data["mtime"] = os.path.getmtime("dataset/DC1.pkl.gz")
-    data["mtimeLocaltime"] = time.ctime(os.path.getmtime("dataset/DC1.pkl.gz"))
+    data["mtime"] = os.path.getmtime(dataset_path + ".pkl.gz")
+    data["mtimeLocaltime"] = time.ctime(os.path.getmtime(dataset_path + ".pkl.gz"))
     data["waktuRegistrasiTerakhir"] = dc1.iloc[-1]["waktu_registrasi"]
     return data
 
