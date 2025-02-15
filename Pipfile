@@ -4,7 +4,6 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-darts = "*"
 flask = "*"
 pandas = "*"
 numpy = "1.26.4"
