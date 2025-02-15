@@ -7,7 +7,7 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import pandas as pd
 from tools import read_dataset_pickle, save_dataset_as_pickle, read_dataset, malloc_trim
-from preprocess import preprocess_dataset
+from preprocess import preprocess_dataset, convert_dtypes
 from filterdf import filter_in_year, filter_in_year_month,filter_last,resample_opt,default_filter
 
 ALLOWED_EXTENSIONS = { "csv", "xlsx" }
@@ -872,24 +872,29 @@ def update_dataset():
         dataset_file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         dataset_file.save(dataset_file_path)
 
-        preprocess_time_start = time.time()
-        df_new = preprocess_dataset(read_dataset(dataset_file_path))
-        preprocess_time_end = time.time()
+        read_dataset_time_start = time.time()
+        df_new = read_dataset(dataset_file_path)
+        read_dataset_time_end = time.time()
 
         concat_time_start = time.time()
-        #df = pd.concat([dc1, df_new]).reset_index().drop(columns=["index"])
         df = pd.concat([dc1, df_new], ignore_index=True)
         concat_time_end = time.time()
+
+        preprocess_time_start = time.time()
+        df = convert_dtypes(df)
+        df = preprocess_dataset(df)
+        preprocess_time_end = time.time()
 
         save_time_start = time.time()
         # Compressing the pickle file with gzip takes around ~85 seconds on
         # my computer. This may be a concern if you want faster dataset update
-        save_dataset_as_pickle(df, "dataset/DC1")
+        save_dataset_as_pickle(df, dataset_path)
         save_time_end = time.time()
 
         dc1 = df
         return {
                 "status": "Updated",
+                "read_dataset_time": read_dataset_time_end - read_dataset_time_start,
                 "preprocess_time": preprocess_time_end - preprocess_time_start,
                 "concat_time": concat_time_end - concat_time_start,
                 "save_time": save_time_end - save_time_start,
