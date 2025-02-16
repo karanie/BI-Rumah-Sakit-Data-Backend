@@ -1,4 +1,4 @@
-from utils.readdata import read_dataset_pickle
+from utils.colddata import read_dataset_pickle
 from utils.preprocess import preprocess_dataset
 
 dataset_path = "data/dataset/DC1"
