@@ -13,6 +13,8 @@ pgzip = "*"
 prophet = "*"
 openpyxl = "*"
 flask-caching = "*"
+sqlalchemy = "*"
+psycopg2 = "*"
 
 [dev-packages]
 
