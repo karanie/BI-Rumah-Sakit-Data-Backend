@@ -1,15 +1,14 @@
 import json
 from flask import request
-from flask_caching import Cache
-from filterdf import filtertime, filtercols
-from getdata import get_aggregate_data, get_time_series_data, get_time_series_aggregate_data, get_exponential_smoothing_forecast_data, get_prophet_forecast_data
+from cache import cache
+from .filterdf import filtertime, filtercols
+from .getdata import get_aggregate_data, get_time_series_data, get_time_series_aggregate_data, get_exponential_smoothing_forecast_data, get_prophet_forecast_data
 
 def type_is_true(value):
     return value.lower() == "true"
 
 def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols=[], models=[], preprocess=None, postprocess=None):
     def callback():
-        tipe_data = request.args.get("tipe_data")
         aggregate = request.args.get("aggregate", type=type_is_true)
         timeseries = request.args.get("timeseries", type=type_is_true)
         forecast = request.args.get("forecast", type=type_is_true)
@@ -64,9 +63,6 @@ def generate_route_callback(name, df, timeCol, categoricalCols=[], numericalCols
     return callback
 
 def init_routes_data(app, routes):
-    cache = Cache(config={'CACHE_TYPE': 'SimpleCache'})
-    cache.init_app(app)
-
     for r in routes:
         app.route(f"/api/data{r['route']}", methods=["GET"])(cache.cached(timeout=50, query_string=True)(r['callback']))
 

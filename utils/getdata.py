@@ -1,7 +1,6 @@
 import os
 import pickle
 import numpy as np
-import pandas as pd
 
 def get_aggr_func(aggr_str):
     map = {
@@ -77,6 +76,7 @@ def get_time_series_aggregate_data(df, timeCol, resample="", categoricalCols=[],
     return data
 
 def get_exponential_smoothing_forecast_data(df, timeCol, resample="D", categoricalCols=[], numericalCols=[], timef="%Y-%m-%d", pivot=False, agg="sum"):
+    # Needs darts as dependency. I actually removed darts because the deps are so fucking big. So this function won't work
     from darts.timeseries import TimeSeries
     from darts.models import ExponentialSmoothing
 
