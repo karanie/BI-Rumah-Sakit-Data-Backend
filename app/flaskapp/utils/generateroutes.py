@@ -1,8 +1,8 @@
 import json
 from flask import request
-from cache import cache
-from .filterdf import filtertime, filtercols
-from .getdata import get_aggregate_data, get_time_series_data, get_time_series_aggregate_data, get_exponential_smoothing_forecast_data, get_prophet_forecast_data
+from ..cache import cache
+from computes.filterdf import filtertime, filtercols
+from computes.getdata import get_aggregate_data, get_time_series_data, get_time_series_aggregate_data, get_exponential_smoothing_forecast_data, get_prophet_forecast_data
 
 def type_is_true(value):
     return value.lower() == "true"

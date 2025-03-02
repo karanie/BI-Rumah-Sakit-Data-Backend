@@ -3,7 +3,8 @@ from .kunjungan import routes_kunjungan
 from .pasien import routes_pasien
 from .demografi import routes_demografi
 from .autogen import routes_autogen
-from .utils import routes_utils
+from .utility import routes_utils
+from .test import routes_test
 
 def init_app(app):
     app.register_blueprint(routes_pasien)
@@ -12,3 +13,4 @@ def init_app(app):
     app.register_blueprint(routes_demografi)
     app.register_blueprint(routes_autogen)
     app.register_blueprint(routes_utils)
+    app.register_blueprint(routes_test)

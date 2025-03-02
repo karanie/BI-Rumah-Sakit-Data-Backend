@@ -79,7 +79,7 @@ def sort_date_values(df):
     df = df.sort_values("waktu_registrasi")
     return df
 
-from .optimization import malloc_trim
+from optimization import malloc_trim
 def preprocess_dataset(df):
     func_list = [
             convert_kabupaten_na,

@@ -1,7 +1,7 @@
 from flask import Blueprint, request
 import pandas as pd
-from utils.filterdf import filter_in_year, filter_in_year_month
-import data as d
+from computes.filterdf import filter_in_year, filter_in_year_month
+from ..data import dataset as d
 
 routes_demografi = Blueprint("routes_demografi", __name__)
 @routes_demografi.route("/api/demografi", methods=["GET"])
@@ -11,7 +11,7 @@ def data_demografi():
     tahun = request.args.get("tahun", type=int)
     bulan = request.args.get("bulan", type=int)
 
-    temp_df = d.dataset
+    temp_df = d
 
     temp_df = temp_df.loc[temp_df["provinsi"] == "RIAU"]
 

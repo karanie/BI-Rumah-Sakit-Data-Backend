@@ -2,10 +2,10 @@ import os.path, time
 from flask import Blueprint, request
 import pandas as pd
 from werkzeug.utils import secure_filename
-from utils.colddata import save_dataset_as_pickle, read_dataset
-from utils.preprocess import preprocess_dataset, convert_dtypes
+from datastore.file import save_dataset_as_pickle, read_dataset
+from computes.preprocess import preprocess_dataset, convert_dtypes
 from config import ALLOWED_EXTENSIONS, DATASET_PATH, UPLOAD_FOLDER
-import data as d
+from ..data import dataset as d
 
 routes_utils = Blueprint("routes_utils", __name__)
 @routes_utils.route("/api/last-update", methods=["GET"])
@@ -13,19 +13,20 @@ def last_update():
     res = {}
     res["mtime"] = os.path.getmtime(DATASET_PATH + ".pkl.gz")
     res["mtimeLocaltime"] = time.ctime(os.path.getmtime(DATASET_PATH + ".pkl.gz"))
-    res["waktuRegistrasiTerakhir"] = d.dataset.iloc[-1]["waktu_registrasi"]
+    res["waktuRegistrasiTerakhir"] = d.iloc[-1]["waktu_registrasi"]
     return res
 
 @routes_utils.route("/api/filter-options", methods=["GET"])
 def data_filter_options():
     res = {}
-    res["kabupaten"] = sorted(d.dataset["kabupaten"].unique().tolist())
-    res["tahun"] = sorted(d.dataset["waktu_registrasi"].dt.year.unique().tolist())
-    res["bulan"] = sorted(d.dataset["waktu_registrasi"].dt.month.unique().tolist())
+    res["kabupaten"] = sorted(d["kabupaten"].unique().tolist())
+    res["tahun"] = sorted(d["waktu_registrasi"].dt.year.unique().tolist())
+    res["bulan"] = sorted(d["waktu_registrasi"].dt.month.unique().tolist())
     return res
 
 @routes_utils.route("/api/update-dataset", methods=["POST"])
 def update_dataset():
+    global d
     method = request.args.get("method", type=str)
 
     if method == "concatdf":
@@ -46,7 +47,7 @@ def update_dataset():
         read_dataset_time_end = time.time()
 
         concat_time_start = time.time()
-        df = pd.concat([d.dataset, df_new], ignore_index=True)
+        df = pd.concat([d, df_new], ignore_index=True)
         concat_time_end = time.time()
 
         preprocess_time_start = time.time()
@@ -60,7 +61,7 @@ def update_dataset():
         save_dataset_as_pickle(df, DATASET_PATH)
         save_time_end = time.time()
 
-        d.dataset = df
+        d = df
         return {
                 "status": "Updated",
                 "read_dataset_time": read_dataset_time_end - read_dataset_time_start,

@@ -1,8 +1,8 @@
 import os, pickle
 from flask import Blueprint, request
 import pandas as pd
-from utils.filterdf import filter_in_year, filter_in_year_month,filter_last
-import data as d
+from computes.filterdf import filter_in_year, filter_in_year_month,filter_last
+from ..data import dataset as d
 
 routes_kunjungan = Blueprint("routes_kunjungan", __name__)
 @routes_kunjungan.route("/api/kunjungan", methods=["GET"])
@@ -20,7 +20,7 @@ def routes():
     jenis_registrasi = request.args.get("jenis_registrasi", type=str)
     departemen = request.args.get("departemen", type=str)
 
-    temp_df = d.dataset
+    temp_df = d
 
     if kabupaten is not None:
         temp_df = temp_df[temp_df["kabupaten"] == kabupaten]
@@ -56,7 +56,7 @@ def routes():
 
     elif tipe_data == "pertumbuhanPertahun":
 
-        temp_df = d.dataset[["waktu_registrasi"]]
+        temp_df = d[["waktu_registrasi"]]
         temp_df = temp_df.set_index("waktu_registrasi")
         temp_df["Jumlah Kunjungan"] = 1
         temp_df = temp_df.resample("Y").sum()
@@ -105,8 +105,8 @@ def routes():
 
         else:
             #Preprocessing
-            d.dataset['waktu_registrasi'] = pd.to_datetime(d.dataset['waktu_registrasi'], format= "%Y/%m/%d")
-            df = d.dataset[['waktu_registrasi', 'jenis_registrasi', 'id_registrasi']]
+            d['waktu_registrasi'] = pd.to_datetime(d['waktu_registrasi'], format= "%Y/%m/%d")
+            df = d[['waktu_registrasi', 'jenis_registrasi', 'id_registrasi']]
             agg_df = df.groupby(['waktu_registrasi','jenis_registrasi']).agg({'id_registrasi':'count'}).reset_index().sort_values(['jenis_registrasi','waktu_registrasi'])
             total_sales_df = agg_df.pivot(index='waktu_registrasi',columns='jenis_registrasi', values='id_registrasi')
 

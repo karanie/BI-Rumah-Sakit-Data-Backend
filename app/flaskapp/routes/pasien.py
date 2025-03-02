@@ -1,7 +1,7 @@
 from flask import Blueprint, request
 import pandas as pd
-from utils.filterdf import filter_in_year_month, resample_opt, default_filter
-import data as d
+from computes.filterdf import filter_in_year_month, resample_opt, default_filter
+from ..data import dataset as d
 
 routes_pasien = Blueprint("routes_pasien", __name__)
 @routes_pasien.route("/api/pasien", methods=["GET"])
@@ -12,7 +12,7 @@ def routes():
     tahun = request.args.get("tahun", type=int)
     kabupaten = request.args.get("kabupaten", type=str)
 
-    temp_df = d.dataset
+    temp_df = d
     temp_df = default_filter(temp_df, kabupaten, tahun, bulan)
 
     if tipe_data == "jumlahJenisKelamin":

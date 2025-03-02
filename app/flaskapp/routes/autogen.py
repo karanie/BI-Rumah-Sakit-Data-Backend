@@ -1,6 +1,6 @@
 from flask import Blueprint
-import data as d
-from utils.generateroutes import generate_route_callback, init_routes_data
+from ..data import dataset as d
+from ..utils.generateroutes import generate_route_callback, init_routes_data
 
 def filterDemografiInRiau(df):
     return df.loc[df["provinsi"] == "RIAU"]
@@ -11,7 +11,7 @@ routes = [
         "route": "/demografi",
         "callback": generate_route_callback(
             name="demografi",
-            df=d.dataset,
+            df=d,
             timeCol="waktu_registrasi",
             categoricalCols=["kabupaten"],
             preprocess=filterDemografiInRiau,
@@ -21,7 +21,7 @@ routes = [
         "route": "/jenisregis",
         "callback": generate_route_callback(
             name="jenisregis",
-            df=d.dataset,
+            df=d,
             timeCol="waktu_registrasi",
             categoricalCols=["jenis_registrasi"]
         )
@@ -30,7 +30,7 @@ routes = [
         "route": "/pendapatan",
         "callback": generate_route_callback(
             name="pendapatan",
-            df=d.dataset,
+            df=d,
             timeCol="waktu_registrasi",
             numericalCols=["total_tagihan", "total_semua_hpp"]
         )
@@ -39,7 +39,7 @@ routes = [
         "route": "/pendapatan/jenisregis",
         "callback": generate_route_callback(
             name="pendapatanJenisregis",
-            df=d.dataset,
+            df=d,
             timeCol="waktu_registrasi",
             categoricalCols=["jenis_registrasi"],
             numericalCols=["total_tagihan"],
@@ -55,7 +55,7 @@ routes = [
         "route": "/kunjungan/jenisregis",
         "callback": generate_route_callback(
             name="kunjunganJenisregis",
-            df=d.dataset,
+            df=d,
             timeCol="waktu_registrasi",
             categoricalCols=["jenis_registrasi"],
             models=[
