@@ -1,8 +1,13 @@
 import os
-from datastore.file import read_dataset_pickle
+from datastore.file import read_pickle, save_dataset_as_pickle
+from sources.file import read_dataset
 from computes.preprocess import preprocess_dataset
 import config
 
-dataset_path = os.path.join(os.getcwd(), config.DATASET_PATH)
-dataset = read_dataset_pickle(dataset_path)
+if os.path.isfile(config.DATASTORE_FILE_PATH):
+    dataset = read_pickle(config.DATASTORE_FILE_PATH)
+else:
+    dataset = read_dataset(config.INIT_SOURCE_PATH)
+    save_dataset_as_pickle(dataset, config.DATASTORE_FILE_PATH)
+
 dataset = preprocess_dataset(dataset)

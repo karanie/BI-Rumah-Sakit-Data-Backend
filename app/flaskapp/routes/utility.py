@@ -4,15 +4,15 @@ import pandas as pd
 from werkzeug.utils import secure_filename
 from datastore.file import save_dataset_as_pickle, read_dataset
 from computes.preprocess import preprocess_dataset, convert_dtypes
-from config import ALLOWED_EXTENSIONS, DATASET_PATH, UPLOAD_FOLDER
+from config import ALLOWED_EXTENSIONS, DATASTORE_FILE_PATH, UPLOAD_FOLDER
 from ..data import dataset as d
 
 routes_utils = Blueprint("routes_utils", __name__)
 @routes_utils.route("/api/last-update", methods=["GET"])
 def last_update():
     res = {}
-    res["mtime"] = os.path.getmtime(DATASET_PATH + ".pkl.gz")
-    res["mtimeLocaltime"] = time.ctime(os.path.getmtime(DATASET_PATH + ".pkl.gz"))
+    res["mtime"] = os.path.getmtime(DATASTORE_FILE_PATH)
+    res["mtimeLocaltime"] = time.ctime(os.path.getmtime(DATASTORE_FILE_PATH))
     res["waktuRegistrasiTerakhir"] = d.iloc[-1]["waktu_registrasi"]
     return res
 
@@ -58,7 +58,7 @@ def update_dataset():
         save_time_start = time.time()
         # Compressing the pickle file with gzip takes around ~85 seconds on
         # my computer. This may be a concern if you want faster dataset update
-        save_dataset_as_pickle(df, DATASET_PATH)
+        save_dataset_as_pickle(df, DATASTORE_FILE_PATH)
         save_time_end = time.time()
 
         d = df

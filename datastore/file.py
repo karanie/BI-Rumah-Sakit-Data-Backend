@@ -4,6 +4,10 @@ import pgzip
 from sources.file import read_dataset
 
 def read_dataset_pickle(path, save_as_pickle=True):
+    """
+    Deprecated. This shit too confusing and takes too much work for something
+    that does really simple thing.
+    """
     file_list = [
             {"ext": ".pkl.gz"},
             {"ext": ".csv.gz"},
@@ -32,10 +36,17 @@ def read_dataset_pickle(path, save_as_pickle=True):
     else:
         out = read_dataset(path + latest_file["ext"])
         if (save_as_pickle):
-            save_dataset_as_pickle(out, path)
+            save_dataset_as_pickle(out, path + ".pkl.gz")
+    return out
+
+def read_pickle(path):
+    print(f"Reading {path}")
+
+    with pgzip.open(path, "rb", thread=0) as f:
+        out = pickle.load(f)
 
     return out
 
 def save_dataset_as_pickle(df, filename):
-    with pgzip.open(filename + ".pkl.gz", "wb", thread=0) as f:
+    with pgzip.open(filename, "wb", thread=0) as f:
         pickle.dump(df, f)
