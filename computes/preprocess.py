@@ -50,7 +50,7 @@ def convert_kabupaten_casing(df):
 
 def drop_gender_ambigu(df):
     df["jenis_kelamin"] = df["jenis_kelamin"].astype("category")
-    df.loc[df["jenis_kelamin"] == "Ambigu", "jenis_kelamin"] = np.NaN
+    df.loc[df["jenis_kelamin"] == "Ambigu", "jenis_kelamin"] = np.nan
     df["jenis_kelamin"] = df["jenis_kelamin"].cat.remove_unused_categories()
     return df
 
