@@ -1,8 +1,15 @@
-FROM archlinux
+FROM python:3.13-bookworm AS build
+ENV PATH="/root/.local/bin:${PATH}"
 WORKDIR /code
-RUN pacman --noconfirm -Syu gcc make bash python-pipenv musl linux-headers postgresql-libs
-COPY Pipfile Pipfile.lock .
-RUN pipenv install
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    curl \
+    git \
+    libopenblas-dev \
+    && rm -rf /var/lib/apt/lists/*
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+COPY pyproject.toml uv.lock .
+RUN sh -c 'uv sync'
 COPY . .
-#CMD ["pipenv", "run", "flask", "--app", "./app/flask/main.py", "run", "--host", "0.0.0.0"]
-CMD ["pipenv", "run", "python", "main.py", "app", "flask" ]
+CMD ["uv", "run", "python", "main.py", "app", "flask" ]
