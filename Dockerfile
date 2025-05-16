@@ -12,4 +12,4 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 COPY pyproject.toml uv.lock .
 RUN sh -c 'uv sync'
 COPY . .
-CMD ["uv", "run", "python", "main.py", "app", "flask" ]
+CMD ["./run.sh" ]
