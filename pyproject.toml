@@ -3,6 +3,10 @@ name = "bi-rumah-sakit-data-backend"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
+    "adbc-driver-postgresql>=1.6.0",
+    "adbc-driver-sqlite>=1.6.0",
+    "connectorx>=0.4.3",
+    "fastapi>=0.115.12",
     "flask>=3.1.0",
     "flask-caching>=2.3.1",
     "flask-cors>=5.0.1",
@@ -10,7 +14,10 @@ dependencies = [
     "openpyxl>=3.1.5",
     "pandas>=2.2.3",
     "pgzip>=0.3.5",
+    "polars>=1.29.0",
     "prophet>=1.1.6",
     "psycopg2-binary>=2.9.10",
+    "pyarrow>=20.0.0",
     "sqlalchemy>=2.0.40",
+    "uvicorn[standard]>=0.34.2",
 ]
