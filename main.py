@@ -1,14 +1,20 @@
 import sys
-from app.flaskapp import app
+import config
 
 def app_flask():
+    from app.flaskapp import app
     app.run(host="0.0.0.0")
 
+def app_fastapi():
+    import uvicorn
+    uvicorn.run("app.fastapi:app", host="0.0.0.0", port=5001, log_level="info")
+
 cli_tree = {
-        "app": {
-            "flask": app_flask
-            }
-        }
+    "app": {
+        "flask": app_flask,
+        "fastapi": app_fastapi
+    },
+}
 
 def interpret_argv(argv, tree):
     tree = tree[argv.pop(0)]

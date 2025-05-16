@@ -1,7 +1,9 @@
 import pandas as pd
+import polars as pl
 import os
 import sqlalchemy
 import uuid
+import config
 
 def seed_df_to_db(df, db_table, db_connection):
     df.to_sql(db_table, db_connection)
@@ -102,3 +104,19 @@ def read_sql(db_table, db_connection):
         "tglPulang"
     ]
     return pd.read_sql(db_table, db_connection, dtype=dtype, parse_dates=parse_dates)
+
+def pl_read_database(query, execute_options = None):
+    # Use sqlalchemy engine to query the database. This is slower when querieng
+    # large data.
+    # from sqlalchemy import engine
+    # engine = engine.create_engine("postgresql://birumahsakit:birumahsakit@bi-postgresql/birumahsakit")
+    # conn = engine.connect()
+    # res =  pl.read_database(query, connection=conn, execute_options=execute_options)
+    # conn.close()
+    # return res
+
+    return pl.read_database_uri(query, uri=config.DB_CONNECTION, execute_options=execute_options)
+
+def pl_write_database(df, if_table_exists="replace"):
+    return df.write_database("dataset", connection=config.DB_CONNECTION, if_table_exists=if_table_exists)
+
