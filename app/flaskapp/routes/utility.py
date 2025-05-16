@@ -3,7 +3,7 @@ from flask import Blueprint, request
 import pandas as pd
 from werkzeug.utils import secure_filename
 from datastore.file import save_dataset_as_pickle, read_dataset
-from computes.preprocess import preprocess_dataset, convert_dtypes
+from computes.preprocess import PreprocessPandas
 from config import ALLOWED_EXTENSIONS, DATASTORE_FILE_PATH, UPLOAD_FOLDER
 from ..data import dataset as d
 
@@ -51,8 +51,9 @@ def update_dataset():
         concat_time_end = time.time()
 
         preprocess_time_start = time.time()
-        df = convert_dtypes(df)
-        df = preprocess_dataset(df)
+        pr = PreprocessPandas()
+        df = pr.convert_dtypes(df)
+        df = pr.preprocess_dataset(df)
         preprocess_time_end = time.time()
 
         save_time_start = time.time()
