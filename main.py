@@ -15,41 +15,39 @@ def init_datastore_dbms():
         print("Checking if dbms have dataset..")
         cx.read_sql(config.DB_CONNECTION, "SELECT id_registrasi FROM dataset LIMIT 1")
         print("Table have dataset")
-    except Exception as e:
+    except RuntimeError as e:
         print("Table doesn't have dataset")
         print(f"Initializing dataset from {config.INIT_SOURCE_PATH}")
+
+        import tools
         import polars as pl
+
         from sources.file import SourceFile
         s = SourceFile()
-        df = s.read_dataset(config.INIT_SOURCE_PATH)
-        df = df.select(
-            pl.col("id_registrasi").cast(pl.Int64),
-            pl.col("id_pasien").cast(pl.Int64),
-            pl.col("jenis_kelamin").cast(pl.Categorical),
-            pl.col("ttl").cast(pl.Int64),
-            pl.col("provinsi").cast(pl.Categorical),
-            pl.col("kabupaten").cast(pl.Categorical),
-            pl.col("rujukan").cast(pl.Categorical),
-            pl.col("no_registrasi").cast(pl.Int64),
-            pl.col("jenis_registrasi").cast(pl.Categorical),
-            pl.col("fix_pasien_baru").cast(pl.Categorical),
-            pl.col("nama_departemen").cast(pl.Categorical),
-            pl.col("jenis_penjamin").cast(pl.Categorical),
-            pl.col("diagnosa_primer").cast(pl.Categorical),
-            pl.col("nama_instansi_utama").cast(pl.Categorical),
-            pl.col("waktu_registrasi").str.to_datetime(),
-            pl.col("total_semua_hpp").cast(pl.Float64),
-            pl.col("total_tagihan").cast(pl.Float64),
-            pl.col("tanggal_lahir").str.to_date(),
-            pl.col("tglPulang").str.to_datetime(),
-            pl.col("usia").cast(pl.Float64),
-            pl.col("kategori_usia").cast(pl.Categorical),
-            pl.col("kelas_hak").cast(pl.Categorical),
-            pl.col("los_rawatan").cast(pl.Float64),
-            pl.col("pekerjaan").cast(pl.Categorical),
-        )
+        t_read, df = tools.measure_time(lambda: s.read_dataset(config.INIT_SOURCE_PATH))
+
+        from computes.preprocess import PreprocessPolars
+        pre = PreprocessPolars()
+        t_filter_cols, df = tools.measure_time(lambda: pre.filter_cols(df))
+        t_preprocess, df = tools.measure_time(lambda: pre.preprocess_dataset(df))
+        t_conv_dtypes, df = tools.measure_time(lambda: pre.convert_dtypes(df))
+
         from datastore.rdbms import pl_write_database
-        pl_write_database(df)
+        t_write, _ = tools.measure_time(lambda: pl_write_database(df))
+
+        print(f"Time to read {config.INIT_SOURCE_PATH}: {t_read}s")
+        print(f"Time to filter columns: {t_filter_cols}s")
+        print(f"Time to preprocess: {t_preprocess}s")
+        print(f"Time to convert dtypes: {t_conv_dtypes}s")
+        print(f"Time to write: {t_write}s")
+        print(f"Initialization done!")
+
+def rm_datastore_dbms():
+    import sqlalchemy
+    engine = sqlalchemy.engine.create_engine(config.DB_CONNECTION)
+    with engine.connect() as conn:
+        conn.execute(sqlalchemy.text("DROP TABLE dataset"))
+        conn.commit()
 
 cli_tree = {
     "app": {
@@ -58,6 +56,9 @@ cli_tree = {
     },
     "init": {
         "datastore-dbms": init_datastore_dbms
+    },
+    "rm": {
+        "datastore-dbms": rm_datastore_dbms
     }
 }
 
