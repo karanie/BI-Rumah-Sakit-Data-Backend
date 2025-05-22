@@ -110,6 +110,45 @@ class DatastoreDB():
             return self._pd_write_database(df=df, connection=connection)
         raise Exception(f"{self.backend} is not available")
 
+    def create_table(self, table: str = config.DB_TABLE):
+        import sqlalchemy
+        engine = sqlalchemy.engine.create_engine(config.DB_CONNECTION)
+        with engine.connect() as conn:
+            conn.execute(
+                sqlalchemy.text(
+                    f"""
+                    CREATE TABLE {table} (
+                        id_registrasi bigint,
+                        id_pasien bigint,
+                        jenis_kelamin text,
+                        ttl bigint,
+                        provinsi text,
+                        kabupaten text,
+                        rujukan text,
+                        no_registrasi bigint,
+                        jenis_registrasi text,
+                        fix_pasien_baru text,
+                        nama_departemen text,
+                        jenis_penjamin text,
+                        diagnosa_primer text,
+                        nama_instansi_utama text,
+                        waktu_registrasi timestamp,
+                        total_semua_hpp double precision,
+                        total_tagihan double precision,
+                        tanggal_lahir date,
+                        "tglPulang" timestamp,
+                        usia double precision,
+                        kategori_usia text,
+                        kelas_hak text,
+                        los_rawatan double precision,
+                        pekerjaan text
+                    )
+                    """
+                )
+            )
+            conn.commit()
+
+
 def upsert_df(df: pd.DataFrame, table_name: str, conn):
     """Implements the equivalent of pd.DataFrame.to_sql(..., if_exists='update')
     (which does not exist). Creates or updates the db records based on the
