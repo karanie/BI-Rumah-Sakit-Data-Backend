@@ -38,8 +38,10 @@ def init_datastore_dbms():
         t_preprocess, df = tools.measure_time(lambda: pre.preprocess_dataset(df))
         t_conv_dtypes, df = tools.measure_time(lambda: pre.convert_dtypes(df))
 
-        from datastore.rdbms import pl_write_database
-        t_write, _ = tools.measure_time(lambda: pl_write_database(df))
+        from datastore.rdbms import DatastoreDB
+        dt = DatastoreDB()
+        dt.create_table()
+        t_write, _ = tools.measure_time(lambda: dt.write_database(df, engine="adbc"))
 
         print(f"Time to read {config.INIT_SOURCE_PATH}: {t_read}s")
         print(f"Time to filter columns: {t_filter_cols}s")
