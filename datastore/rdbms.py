@@ -14,13 +14,14 @@ class DatastoreDB():
         df: pl.DataFrame,
         db_table=config.DB_TABLE,
         connection=config.DB_CONNECTION,
-        if_table_exists="replace"
+        if_table_exists="append",
+        engine="adbc"
     ):
         return df.write_database(
             db_table,
             connection=connection,
             if_table_exists=if_table_exists,
-            engine="adbc"
+            engine=engine
         )
 
     def _pl_read_database(
@@ -99,12 +100,14 @@ class DatastoreDB():
         self,
         df,
         db_table=config.DB_TABLE,
-        connection=config.DB_CONNECTION
+        connection=config.DB_CONNECTION,
+        if_table_exists="append",
+        engine="adbc"
     ):
         if self.backend == "polars":
-            return self._pl_write_database(query=query, connection=connection)
+            return self._pl_write_database(df=df, connection=connection, engine=engine)
         if self.backend == "pandas":
-            return self._pd_write_database(query=query, connection=connection)
+            return self._pd_write_database(df=df, connection=connection)
         raise Exception(f"{self.backend} is not available")
 
 def upsert_df(df: pd.DataFrame, table_name: str, conn):
