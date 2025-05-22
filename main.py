@@ -9,6 +9,12 @@ def app_fastapi():
     import uvicorn
     uvicorn.run("app.fastapi:app", host="0.0.0.0", port=5001, log_level="info")
 
+def start_api_pollers():
+    print("STARTING API POLLERS..")
+    import workers.pollers
+    poller = workers.pollers.APISourcePollers(f"http://127.0.0.1:8000/api/data/dummy", timing=5)
+    poller.run()
+
 def init_datastore_dbms():
     import connectorx as cx
     try:
@@ -53,6 +59,9 @@ cli_tree = {
     "app": {
         "flask": app_flask,
         "fastapi": app_fastapi
+    },
+    "worker": {
+        "api-pollers": start_api_pollers
     },
     "init": {
         "datastore-dbms": init_datastore_dbms
