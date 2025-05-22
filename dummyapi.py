@@ -86,7 +86,7 @@ def rujukan():
     return np.random.choice(label, p=p)
 
 def no_registrasi():
-    return -1
+    return random.randint(1,100000)
 
 def jenis_registrasi():
     label = ['OTC', 'Rawat Inap', 'IGD', 'Rawat Jalan']
