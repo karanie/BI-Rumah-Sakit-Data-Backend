@@ -197,17 +197,26 @@ def total_semua_hpp():
 def total_tagihan():
     return 42
 
-def tanggal_lahir():
-    return 42
+def tanggal_lahir(datetime_start):
+    fmt = '%Y-%m-%d %H:%M:%S'
+    _datetime_start = datetime.datetime.strptime(datetime_start, fmt)
+    datetime_offset = datetime.timedelta(weeks=random.randint(260, 2600), hours=random.randint(0,12), minutes=random.randint(0, 59), seconds=random.randint(0, 59))
+    res = _datetime_start + datetime_offset
+    return res.strftime(fmt)
 
-def tglPulang():
-    return 42
+def tglPulang(datetime_start):
+    fmt = '%Y-%m-%d %H:%M:%S'
+    _datetime_start = datetime.datetime.strptime(datetime_start, fmt)
+    datetime_offset = datetime.timedelta(minutes=random.randint(0, 59), seconds=random.randint(0, 59))
+    res = _datetime_start + datetime_offset
+    return res.strftime(fmt)
 
 def usia():
     return 42
 
 def kategori_usia():
-    return 42
+    label = ['anak-anak', 'bayi & balita', 'dewasa', 'lansia', 'remaja']
+    return np.random.choice(label)
 
 
 columns = {
@@ -246,7 +255,7 @@ def dummy(datetime_start: str | None = None):
     res = [ {} for i in range(res_len) ]
     for i in range(res_len):
         for k, v in columns.items():
-            if k == "waktu_registrasi":
+            if k == "waktu_registrasi" or k == "tanggal_lahir" or k == "tglPulang":
                 fmt = '%Y-%m-%d %H:%M:%S'
                 if (datetime_start):
                     dt_start = datetime_start
