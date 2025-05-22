@@ -18,6 +18,7 @@ dependencies = [
     "prophet>=1.1.6",
     "psycopg2-binary>=2.9.10",
     "pyarrow>=20.0.0",
+    "requests>=2.32.3",
     "sqlalchemy>=2.0.40",
     "uvicorn[standard]>=0.34.2",
 ]
