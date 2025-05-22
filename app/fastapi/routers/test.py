@@ -1,6 +1,6 @@
 from typing import Annotated
 import fastapi
-from datastore.rdbms import pl_read_database
+from datastore.rdbms import DatastoreDB
 
 router = fastapi.APIRouter()
 

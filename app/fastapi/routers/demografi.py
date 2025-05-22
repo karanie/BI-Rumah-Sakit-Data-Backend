@@ -1,6 +1,6 @@
 from typing import Annotated
 import fastapi
-from datastore.rdbms import pl_read_database
+from datastore.rdbms import DatastoreDB
 
 router = fastapi.APIRouter()
 
@@ -9,17 +9,18 @@ async def data_demografi(
     tahun: Annotated[int, fastapi.Query()] = None,
     bulan: Annotated[int | None, fastapi.Query()] = None,
 ):
+    dt = DatastoreDB(backend="polars")
     if tahun and bulan:
-        df = pl_read_database(
-            f"SELECT kabupaten FROM dataset WHERE date_part('year', waktu_registrasi) = {tahun} AND date_part('month', waktu_registrasi) = {bulan}",
+        df = dt.read_database(
+            f"SELECT kabupaten, count(kabupaten) FROM dataset GROUP BY kabupaten WHERE date_part('year', waktu_registrasi) = {tahun} AND date_part('month', waktu_registrasi) = {bulan}",
         )
     elif tahun:
-        df = pl_read_database(
-            f"SELECT kabupaten FROM dataset WHERE date_part('year', waktu_registrasi) = {tahun}",
+        df = dt.read_database(
+            f"SELECT kabupaten, count(kabupaten) FROM dataset WHERE date_part('year', waktu_registrasi) = {tahun} GROUP BY kabupaten",
         )
     else:
-        df = pl_read_database(
-            f"SELECT kabupaten FROM dataset",
+        df = dt.read_database(
+            f"SELECT kabupaten, count(kabupaten) FROM dataset GROUP BY kabupaten",
         )
 
     df = df["kabupaten"].value_counts()
