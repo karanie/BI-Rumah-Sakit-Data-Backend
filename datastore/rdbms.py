@@ -105,7 +105,7 @@ class DatastoreDB():
         engine="adbc"
     ):
         if self.backend == "polars":
-            return self._pl_write_database(df=df, connection=connection, engine=engine)
+            return self._pl_write_database(df=df, connection=connection, engine=engine, if_table_exists=if_table_exists)
         if self.backend == "pandas":
             return self._pd_write_database(df=df, connection=connection)
         raise Exception(f"{self.backend} is not available")
