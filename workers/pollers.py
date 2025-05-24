@@ -2,6 +2,7 @@ import time
 import requests
 from sources.api import SourceAPI
 from datastore.rdbms import DatastoreDB
+from computes.preprocess import PreprocessPolars
 from tools import get_last_waktu_regis
 
 class Pollers():
@@ -27,6 +28,8 @@ class APISourcePollers(Pollers):
                 last_w = get_last_waktu_regis()
                 df = s.fetch(url, params={"datetime_start": last_w})
                 if not df.is_empty():
+                    pre = PreprocessPolars()
+                    df = pre.preprocess_dataset(df)
                     ds.write_database(df, engine="sqlalchemy")
             except requests.exceptions.ConnectionError as e:
                 print(f"Connection Error on {url}")
