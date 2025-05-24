@@ -153,32 +153,42 @@ async def get_kunjungan(
             conditions.append(f"waktu_registrasi >= '{last_six_month}'")
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
+        query = f"""
+            SELECT
+                DATE_TRUNC('{resample_option}', waktu_registrasi) AS time_period,
+                jenis_registrasi,
+                COUNT(*) AS count
+            FROM dataset
+            {where_clause}
+            GROUP BY time_period, jenis_registrasi
+            ORDER BY time_period
+        """
+
+        temp_df = dt.read_database(query, execute_options={"parameters": params})
+        pivot_df = temp_df.pivot(
+            index="time_period",
+            columns="jenis_registrasi",
+            values="count",
+            aggregate_function="sum"
+        ).fill_null(0)
+
         if not forecast:
-            query = f"""
-                SELECT
-                    DATE_TRUNC('{resample_option}', waktu_registrasi) AS time_period,
-                    jenis_registrasi,
-                    COUNT(*) AS count
-                FROM dataset
-                {where_clause}
-                GROUP BY time_period, jenis_registrasi
-                ORDER BY time_period
-            """
-
-            temp_df = dt.read_database(query, execute_options={"parameters": params})
-            pivot_df = temp_df.pivot(
-                index="time_period",
-                columns="jenis_registrasi",
-                values="count",
-                aggregate_function="sum"
-            ).fill_null(0)
-
             res["index"] = pivot_df["time_period"].dt.strftime("%Y-%m-%d").to_list()
             res["columns"] = [col for col in pivot_df.columns if col != "time_period"]
             res["values"] = [pivot_df[col].to_list() for col in res["columns"]]
         else:
-            # Forecasting logic remains similar as it uses pickle files
-            pass
+            from computes.prophet import predict
+            res = []
+            for jenis_reg in temp_df["jenis_registrasi"].unique():
+                t_df = temp_df.filter(pl.col("jenis_registrasi") == jenis_reg)
+                prediction = predict(t_df, periods=30, ds_col="time_period", y_col="count")
+                prediction = prediction[prediction["ds"] >= t_df["time_period"].max()]
+                res.append({
+                    "index": prediction.ds.dt.strftime("%Y-%m-%d").tolist(),
+                    "columns": [f"Prediksi {jenis_reg}"],
+                    "values": [prediction.yhat.tolist()]
+                })
+            return res
 
     elif tipe_data == "jumlahJenis_registrasi":
         query = """
