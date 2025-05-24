@@ -7,7 +7,7 @@ import fastapi
 app = fastapi.FastAPI()
 
 def id_registrasi():
-    return -1
+    return random.randint(935929, 10000000000)
 
 def id_pasien():
     return -1
@@ -88,9 +88,16 @@ def rujukan():
 def no_registrasi():
     return random.randint(1,100000)
 
-def jenis_registrasi():
+def jenis_registrasi(datetime_start):
+    fmt = '%Y-%m-%d %H:%M:%S'
+    _datetime_start_dt_type = datetime.datetime.strptime(datetime_start, fmt)
+    weekday = _datetime_start_dt_type.isoweekday()
+    is_sunday = weekday == 7
     label = ['OTC', 'Rawat Inap', 'IGD', 'Rawat Jalan']
-    p = [0.04102797, 0.0820216 , 0.11560745, 0.76134298]
+    if is_sunday:
+        p = [0.05, 0.3333333333333333, 0.6166666666666667, 0]
+    else:
+        p = [0.04102797, 0.0820216 , 0.11560745, 0.76134298]
     return np.random.choice(label, p=p)
 
 def fix_pasien_baru():
@@ -184,7 +191,7 @@ def kelas_hak():
 def waktu_registrasi(datetime_start):
     fmt = '%Y-%m-%d %H:%M:%S'
     _datetime_start = datetime.datetime.strptime(datetime_start, fmt)
-    datetime_offset = datetime.timedelta(hours=random.randint(0,12), minutes=random.randint(0, 59), seconds=random.randint(0, 59))
+    datetime_offset = datetime.timedelta(hours=random.randint(0,2), minutes=random.randint(0, 59), seconds=random.randint(0, 59))
     res = _datetime_start + datetime_offset
     return res.strftime(fmt)
 
@@ -248,15 +255,28 @@ columns = {
 
 @app.get("/api/data/dummy")
 def dummy(datetime_start: str | None = None):
-    res_len = np.random.choice([random.randint(1, 10), 0], p=[0.2, 0.8])
+    fmt = '%Y-%m-%d %H:%M:%S'
+    _datetime_start_dt_type = datetime.datetime.strptime(datetime_start, fmt)
+    weekday = _datetime_start_dt_type.isoweekday()
+    is_sunday = weekday == 7
+
+    SUNDAY_MIN = round(50 / 12 * 2)
+    SUNDAY_MAX = round(70 / 12 * 2)
+    DEFAULT_MIN = round(400 / 12 * 2)
+    DEFAULT_MAX = round(550 / 12 * 2)
+
+    if is_sunday:
+        res_len = np.random.choice([random.randint(SUNDAY_MIN, SUNDAY_MAX), 0], p=[0.8, 0.2])
+    else:
+        res_len = np.random.choice([random.randint(DEFAULT_MIN, DEFAULT_MAX), 0], p=[0.8, 0.2])
+
     if res_len == 0:
         return []
 
     res = [ {} for i in range(res_len) ]
     for i in range(res_len):
         for k, v in columns.items():
-            if k == "waktu_registrasi" or k == "tanggal_lahir" or k == "tglPulang":
-                fmt = '%Y-%m-%d %H:%M:%S'
+            if k == "waktu_registrasi" or k == "tanggal_lahir" or k == "tglPulang" or k == "jenis_registrasi":
                 if (datetime_start):
                     dt_start = datetime_start
                 else:
