@@ -146,6 +146,29 @@ class DatastoreDB():
                     """
                 )
             )
+            conn.execute(
+                sqlalchemy.text(
+                    """
+                    CREATE OR REPLACE FUNCTION notify_new_data()
+                    RETURNS TRIGGER AS $$
+                    BEGIN
+                        PERFORM pg_notify('new_data_channel', NEW.waktu_registrasi::text);
+                        RETURN NEW;
+                    END;
+                    $$ LANGUAGE plpgsql;
+                    """
+                )
+            )
+            conn.execute(
+                sqlalchemy.text(
+                    f"""
+                    CREATE TRIGGER new_data_notification
+                    AFTER INSERT ON {table}
+                    FOR EACH STATEMENT
+                    EXECUTE FUNCTION notify_new_data();
+                    """
+                )
+            )
             conn.commit()
 
 
