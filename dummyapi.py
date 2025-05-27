@@ -10,7 +10,7 @@ def id_registrasi():
     return random.randint(935929, 10000000000)
 
 def id_pasien():
-    return -1
+    return random.randint(1, 158110 + 20000)
 
 def jenis_kelamin():
     return random.choice(["Laki-laki", "Perempuan"])
