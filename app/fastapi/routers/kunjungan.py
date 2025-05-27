@@ -5,9 +5,9 @@ import config
 import sqlalchemy
 import polars as pl
 import datetime
+from tools import ds
 
 router = APIRouter()
-dt = DatastoreDB(backend="polars")
 
 @router.get("/api/kunjungan")
 async def get_kunjungan(
@@ -43,10 +43,8 @@ async def get_kunjungan(
     where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
     # Get latest waktu_registrasi in table
-    engine = sqlalchemy.create_engine(config.DB_CONNECTION)
-    with engine.connect() as conn:
-        res_current_time = conn.execute(sqlalchemy.text("SELECT waktu_registrasi FROM dataset ORDER BY Waktu_registrasi DESC LIMIT 1;")).first()
-        current_date = res_current_time[0].strftime("%Y-%m-%d")
+    res_current_time = ds.execute(sqlalchemy.text("SELECT waktu_registrasi FROM dataset ORDER BY Waktu_registrasi DESC LIMIT 1;")).first()
+    current_date = res_current_time[0].strftime("%Y-%m-%d")
 
     # Handle each tipe_data case with optimized SQL
     if tipe_data == "pertumbuhan":
@@ -74,7 +72,7 @@ async def get_kunjungan(
                     ORDER BY time_period
                 """
 
-            temp_df = dt.read_database(query, execute_options={"parameters": params})
+            temp_df = ds.read_database(query, execute_options={"parameters": params})
 
             if temp_df.is_empty():
                 return []
@@ -92,7 +90,7 @@ async def get_kunjungan(
             GROUP BY time_period
             ORDER BY time_period
         """
-        temp_df = dt.read_database(query)
+        temp_df = ds.read_database(query)
 
         res["index"] = temp_df["time_period"].dt.strftime("%Y-%m-%d").to_list()
         res["columns"] = ["Jumlah Kunjungan"]
@@ -110,7 +108,7 @@ async def get_kunjungan(
             ORDER BY time_period
         """
 
-        temp_df = dt.read_database(query, execute_options={"parameters": params})
+        temp_df = ds.read_database(query, execute_options={"parameters": params})
         pivot_df = temp_df.pivot(
             index="time_period",
             columns="rujukan",
@@ -134,7 +132,7 @@ async def get_kunjungan(
             ORDER BY time_period
         """
 
-        temp_df = dt.read_database(query, execute_options={"parameters": params})
+        temp_df = ds.read_database(query, execute_options={"parameters": params})
         pivot_df = temp_df.pivot(
             index="time_period",
             columns="kategori_usia",
@@ -164,7 +162,7 @@ async def get_kunjungan(
             ORDER BY time_period
         """
 
-        temp_df = dt.read_database(query, execute_options={"parameters": params})
+        temp_df = ds.read_database(query, execute_options={"parameters": params})
         pivot_df = temp_df.pivot(
             index="time_period",
             columns="jenis_registrasi",
@@ -200,7 +198,7 @@ async def get_kunjungan(
             GROUP BY jenis_registrasi
         """.format(where_clause=where_clause)
 
-        temp_df = dt.read_database(query, execute_options={"parameters": params})
+        temp_df = ds.read_database(query, execute_options={"parameters": params})
 
         res["index"] = temp_df["jenis_registrasi"].to_list()
         res["values"] = temp_df["count"].to_list()
@@ -220,7 +218,7 @@ async def get_kunjungan(
             additional_where=where_clause.replace("WHERE", "AND") if where_clause else ""
         )
 
-        temp_df = dt.read_database(query, execute_options={"parameters": params})
+        temp_df = ds.read_database(query, execute_options={"parameters": params})
 
         res["index"] = temp_df["nama_departemen"].to_list()
         res["values"] = temp_df["count"].to_list()
@@ -237,7 +235,7 @@ async def get_kunjungan(
             LIMIT 10
         """.format(where_clause=where_clause)
 
-        temp_df = dt.read_database(query, execute_options={"parameters": params})
+        temp_df = ds.read_database(query, execute_options={"parameters": params})
 
         res["index"] = temp_df["diagnosa_primer"].to_list()
         res["values"] = temp_df["count"].to_list()
@@ -260,7 +258,7 @@ async def get_kunjungan(
                 {where_clause}
             """.format(where_clause=where_clause)
 
-        temp_df = dt.read_database(query, execute_options={"parameters": params})
+        temp_df = ds.read_database(query, execute_options={"parameters": params})
         res["value"] = temp_df["count"][0]
 
     elif tipe_data == "penjamin":
@@ -273,7 +271,7 @@ async def get_kunjungan(
             GROUP BY jenis_penjamin
         """.format(where_clause=where_clause)
 
-        temp_df = dt.read_database(query, execute_options={"parameters": params})
+        temp_df = ds.read_database(query, execute_options={"parameters": params})
 
         res["index"] = temp_df["jenis_penjamin"].to_list()
         res["values"] = temp_df["count"].to_list()
@@ -289,7 +287,7 @@ async def get_kunjungan(
             GROUP BY jenis_registrasi, rujukan
         """.format(where_clause=where_clause)
 
-        temp_df = dt.read_database(query, execute_options={"parameters": params})
+        temp_df = ds.read_database(query, execute_options={"parameters": params})
 
         res = {}
         for group in temp_df.partition_by("jenis_registrasi"):
@@ -314,7 +312,7 @@ async def get_kunjungan(
                     additional_where=where_clause.replace("WHERE", "AND") if where_clause else ""
                 )
 
-                temp_df = dt.read_database(query, execute_options={"parameters": params})
+                temp_df = ds.read_database(query, execute_options={"parameters": params})
                 temp_df = temp_df.drop_nulls()
 
                 res["index"] = temp_df["diagnosa_primer"].to_list()
@@ -333,7 +331,7 @@ async def get_kunjungan(
                         additional_where=where_clause.replace("WHERE", "AND") if where_clause else ""
                     )
 
-                    temp_df = dt.read_database(query, execute_options={"parameters": params})
+                    temp_df = ds.read_database(query, execute_options={"parameters": params})
 
                     res["index"] = [diagnosa]
                     res["values"] = [temp_df["count"][0]]
@@ -358,7 +356,7 @@ async def get_kunjungan(
                         ORDER BY time_period
                     """
 
-                    temp_df = dt.read_database(query, execute_options={"parameters": params})
+                    temp_df = ds.read_database(query, execute_options={"parameters": params})
 
                     res["index"] = temp_df["time_period"].dt.strftime("%Y-%m-%d").to_list()
                     res["columns"] = [diagnosa]
@@ -385,7 +383,7 @@ async def get_kunjungan(
                 additional_where=f"{"AND" if where_clause else "WHERE"} jenis_registrasi = :jenis_registrasi" if jenis_registrasi else ""
             )
 
-            temp_df = dt.read_database(query, execute_options={"parameters": params})
+            temp_df = ds.read_database(query, execute_options={"parameters": params})
 
             res["index"] = temp_df["nama_departemen"].to_list()
             res["values"] = temp_df["count"].to_list()
@@ -415,7 +413,7 @@ async def get_kunjungan(
                     additional_where=where_clause.replace("WHERE", "AND") if where_clause else ""
                 )
 
-                temp_df = dt.read_database(query, execute_options={"parameters": params})
+                temp_df = ds.read_database(query, execute_options={"parameters": params})
 
                 res["index"] = [departemen]
                 res["values"] = [temp_df["count"][0]]
@@ -442,7 +440,7 @@ async def get_kunjungan(
                     ORDER BY time_period
                 """
 
-                temp_df = dt.read_database(query, execute_options={"parameters": params})
+                temp_df = ds.read_database(query, execute_options={"parameters": params})
 
                 res["index"] = temp_df["time_period"].dt.strftime("%Y-%m-%d").to_list()
                 res["columns"] = [departemen]
