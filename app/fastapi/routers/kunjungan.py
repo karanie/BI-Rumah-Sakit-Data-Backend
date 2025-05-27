@@ -170,6 +170,9 @@ async def get_kunjungan(
             aggregate_function="sum"
         ).fill_null(0)
 
+        if temp_df.is_empty():
+            return res
+
         if not forecast:
             res["index"] = pivot_df["time_period"].dt.strftime("%Y-%m-%d").to_list()
             res["columns"] = [col for col in pivot_df.columns if col != "time_period"]
