@@ -6,41 +6,52 @@ import uuid
 import config
 
 class DatastoreDB():
-    def __init__(self, backend: Literal["polars", "pandas"]="polars"):
+    def __init__(
+        self,
+        backend: Literal["polars", "pandas"]="polars",
+        connection=config.DB_CONNECTION,
+    ):
         self.backend = backend
+        self.connection = connection
+        self._sqlalchemy_engine = sqlalchemy.engine.create_engine(self.connection)
 
     def _pl_write_database(
         self,
         df: pl.DataFrame,
         db_table=config.DB_TABLE,
-        connection=config.DB_CONNECTION,
         if_table_exists="append",
         engine="adbc"
     ):
-        return df.write_database(
-            db_table,
-            connection=connection,
-            if_table_exists=if_table_exists,
-            engine=engine
-        )
+        if engine == "sqlalchemy":
+            return df.write_database(
+                db_table,
+                connection=self.connection,
+                if_table_exists=if_table_exists,
+                engine=engine
+            )
+        if engine == "adbc":
+            return df.write_database(
+                db_table,
+                connection=self.connection,
+                if_table_exists=if_table_exists,
+                engine=engine
+            )
 
     def _pl_read_database(
         self,
         query=f"SELECT * FROM {config.DB_TABLE}",
-        connection=config.DB_CONNECTION,
         execute_options = None,
         engine="sqlalchemy",
     ) -> pl.DataFrame:
         if engine == "sqlalchemy":
-            sqlalchemy_engine = sqlalchemy.engine.create_engine(connection)
-            conn = sqlalchemy_engine.connect()
+            conn = self._sqlalchemy_engine.connect()
             res =  pl.read_database(query, connection=conn, execute_options=execute_options, infer_schema_length=None)
             conn.close()
             return res
         if engine == "connectorx":
             return pl.read_database_uri(
                 query,
-                uri=connection,
+                uri=self.connection,
                 execute_options=execute_options
             )
 
@@ -48,14 +59,12 @@ class DatastoreDB():
         self,
         df: pd.DataFrame,
         db_table=config.DB_TABLE,
-        connection=config.DB_CONNECTION
     ):
-        return df.to_sql(db_table, connection)
+        return df.to_sql(db_table, self.connection)
 
     def _pd_read_database(
         self,
         query=f"SELECT * FROM {config.DB_TABLE}",
-        connection=config.DB_CONNECTION,
         dtype={
             "jenis_kelamin": "category",
             "provinsi": "category",
@@ -87,33 +96,29 @@ class DatastoreDB():
     def read_database(
         self,
         query=f"SELECT * FROM {config.DB_TABLE}",
-        connection=config.DB_CONNECTION,
         execute_options=None,
     ):
         if self.backend == "polars":
-            return self._pl_read_database(query=query, connection=connection, execute_options=execute_options)
+            return self._pl_read_database(query=query, execute_options=execute_options)
         if self.backend == "pandas":
-            return self._pd_read_database(query=query, connection=connection)
+            return self._pd_read_database(query=query)
         raise Exception(f"{self.backend} is not available")
 
     def write_database(
         self,
         df,
         db_table=config.DB_TABLE,
-        connection=config.DB_CONNECTION,
         if_table_exists="append",
         engine="adbc"
     ):
         if self.backend == "polars":
-            return self._pl_write_database(df=df, connection=connection, engine=engine, if_table_exists=if_table_exists)
+            return self._pl_write_database(df=df, engine=engine, if_table_exists=if_table_exists)
         if self.backend == "pandas":
-            return self._pd_write_database(df=df, connection=connection)
+            return self._pd_write_database(df=df)
         raise Exception(f"{self.backend} is not available")
 
     def create_table(self, table: str = config.DB_TABLE):
-        import sqlalchemy
-        engine = sqlalchemy.engine.create_engine(config.DB_CONNECTION)
-        with engine.connect() as conn:
+        with self._sqlalchemy_engine.connect() as conn:
             conn.execute(
                 sqlalchemy.text(
                     f"""
@@ -170,6 +175,12 @@ class DatastoreDB():
                 )
             )
             conn.commit()
+
+    def execute(self, query):
+        conn = self._sqlalchemy_engine.connect()
+        res = conn.execute(query)
+        conn.close()
+        return res
 
 
 def upsert_df(df: pd.DataFrame, table_name: str, conn):
