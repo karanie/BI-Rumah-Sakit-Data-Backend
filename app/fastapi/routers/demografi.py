@@ -11,18 +11,17 @@ async def data_demografi(
 ):
     if tahun and bulan:
         df = ds.read_database(
-            f"SELECT kabupaten, count(kabupaten) FROM dataset GROUP BY kabupaten WHERE date_part('year', waktu_registrasi) = {tahun} AND date_part('month', waktu_registrasi) = {bulan}",
+            f"SELECT kabupaten, count(kabupaten) as count FROM dataset WHERE date_part('year', waktu_registrasi) = {tahun} AND date_part('month', waktu_registrasi) = {bulan} GROUP BY kabupaten",
         )
     elif tahun:
         df = ds.read_database(
-            f"SELECT kabupaten, count(kabupaten) FROM dataset WHERE date_part('year', waktu_registrasi) = {tahun} GROUP BY kabupaten",
+            f"SELECT kabupaten, count(kabupaten) as count FROM dataset WHERE date_part('year', waktu_registrasi) = {tahun} GROUP BY kabupaten",
         )
     else:
         df = ds.read_database(
-            f"SELECT kabupaten, count(kabupaten) FROM dataset GROUP BY kabupaten",
+            f"SELECT kabupaten, count(kabupaten) as count FROM dataset GROUP BY kabupaten",
         )
 
-    df = df["kabupaten"].value_counts()
     res = {}
     res["index"] = df["kabupaten"].to_list()
     res["values"] = df["count"].to_list()
