@@ -206,10 +206,11 @@ def total_tagihan():
 
 def tanggal_lahir(datetime_start):
     fmt = '%Y-%m-%d %H:%M:%S'
+    res_fmt = '%Y-%m-%d'
     _datetime_start = datetime.datetime.strptime(datetime_start, fmt)
     datetime_offset = datetime.timedelta(weeks=random.randint(260, 2600), hours=random.randint(0,12), minutes=random.randint(0, 59), seconds=random.randint(0, 59))
     res = _datetime_start + datetime_offset
-    return res.strftime(fmt)
+    return res.strftime(res_fmt)
 
 def tglPulang(datetime_start):
     fmt = '%Y-%m-%d %H:%M:%S'
