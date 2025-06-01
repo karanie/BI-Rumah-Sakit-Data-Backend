@@ -18,7 +18,7 @@ async def last_update():
 
     # Get latest waktu_registrasi in table
     res_current_time = ds.execute(sqlalchemy.text("SELECT waktu_registrasi FROM dataset ORDER BY Waktu_registrasi DESC LIMIT 1;")).first()
-    current_date = res_current_time[0].strftime("%Y-%m-%d")
+    current_date = res_current_time[0].strftime("%Y-%m-%d %H:%M:%S")
 
     res["waktuRegistrasiTerakhir"] = current_date
     return res
