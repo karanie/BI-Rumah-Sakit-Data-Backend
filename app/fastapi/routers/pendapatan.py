@@ -61,39 +61,40 @@ async def get_pendapatan(
         sort = "pendapatan"
 
     if tipe_data == "jenis_registrasi":
+        if tahun is None and bulan is None:
+            resample_option = "day"
+        if not tahun:
+            # Get last 6 months data
+            query = f"""
+                WITH last_date AS (
+                    SELECT MAX(waktu_registrasi) AS max_date FROM dataset
+                )
+                SELECT
+                    DATE_TRUNC('{resample_option}', waktu_registrasi) AS time_period,
+                    jenis_registrasi,
+                    SUM(total_tagihan) AS total
+                FROM dataset, last_date
+                WHERE waktu_registrasi >= last_date.max_date - INTERVAL '6 months'
+                {where_clause.replace("WHERE", "AND") if where_clause else ""}
+                GROUP BY time_period, jenis_registrasi
+                ORDER BY time_period
+            """
+        else:
+            query = f"""
+                SELECT
+                    DATE_TRUNC('{resample_option}', waktu_registrasi) AS time_period,
+                    jenis_registrasi,
+                    SUM(total_tagihan) AS total
+                FROM dataset
+                {where_clause}
+                GROUP BY time_period, jenis_registrasi
+                ORDER BY time_period
+            """
+
+        temp_df = ds.read_database(query, execute_options={"parameters": params})
+
         if not forecast:
-            if tahun is None and bulan is None:
-                resample_option = "day"
 
-            if not tahun:
-                # Get last 6 months data
-                query = f"""
-                    WITH last_date AS (
-                        SELECT MAX(waktu_registrasi) AS max_date FROM dataset
-                    )
-                    SELECT
-                        DATE_TRUNC('{resample_option}', waktu_registrasi) AS time_period,
-                        jenis_registrasi,
-                        SUM(total_tagihan) AS total
-                    FROM dataset, last_date
-                    WHERE waktu_registrasi >= last_date.max_date - INTERVAL '6 months'
-                    {where_clause.replace("WHERE", "AND") if where_clause else ""}
-                    GROUP BY time_period, jenis_registrasi
-                    ORDER BY time_period
-                """
-            else:
-                query = f"""
-                    SELECT
-                        DATE_TRUNC('{resample_option}', waktu_registrasi) AS time_period,
-                        jenis_registrasi,
-                        SUM(total_tagihan) AS total
-                    FROM dataset
-                    {where_clause}
-                    GROUP BY time_period, jenis_registrasi
-                    ORDER BY time_period
-                """
-
-            temp_df = ds.read_database(query, execute_options={"parameters": params})
             pivot_df = temp_df.pivot(
                 index="time_period",
                 columns="jenis_registrasi",
@@ -105,33 +106,18 @@ async def get_pendapatan(
             res["columns"] = [col for col in pivot_df.columns if col != "time_period"]
             res["values"] = [pivot_df[col].fill_null(0).to_list() for col in res["columns"]]
         else:
-            # Forecasting logic
-            models_path = [
-                "data/models/pendapatan/prophet_pendapatan_IGD.pkl",
-                "data/models/pendapatan/prophet_pendapatan_OTC.pkl",
-                "data/models/pendapatan/prophet_pendapatan_Rawat Jalan.pkl",
-                "data/models/pendapatan/prophet_pendapatan_Rawat Inap.pkl",
-            ]
-
+            from computes.prophet import predict
             res = []
-            forecast_start_date = ds.read_database(
-                "SELECT MAX(waktu_registrasi) FROM dataset"
-            )["MAX(waktu_registrasi)"][0]
-
-            for path in models_path:
-                if os.path.isfile(path):
-                    with open(path, "rb") as file:
-                        model = pickle.load(file)
-
-                    future = model.make_future_dataframe(periods=30)
-                    forecast = model.predict(future)
-                    forecast = forecast[forecast['ds'] >= forecast_start_date]
-
-                    res.append({
-                        "index": forecast['ds'].dt.strftime("%Y-%m-%d").to_list(),
-                        "columns": ["Prediksi Jumlah Pendapatan"],
-                        "values": [forecast['yhat'].to_list()]
-                    })
+            for jenis_reg in temp_df["jenis_registrasi"].unique():
+                t_df = temp_df.filter(pl.col("jenis_registrasi") == jenis_reg)
+                prediction = predict(t_df, periods=30, ds_col="time_period", y_col="total")
+                prediction = prediction[prediction["ds"] >= t_df["time_period"].max()]
+                res.append({
+                    "index": prediction.ds.dt.strftime("%Y-%m-%d").tolist(),
+                    "columns": [f"Prediksi {jenis_reg}"],
+                    "values": [prediction.yhat.tolist()]
+                })
+            return res
 
     elif tipe_data == "pendapatanPenjamin":
         query = f"""
@@ -486,14 +472,19 @@ async def get_pendapatan(
         else:
             from computes.prophet import predict
             res = []
-            for jenis_reg in temp_df["jenis_registrasi"].unique():
-                t_df = temp_df.filter(pl.col("jenis_registrasi") == jenis_reg)
-                prediction = predict(t_df, periods=30, ds_col="time_period", y_col="count")
-                prediction = prediction[prediction["ds"] >= t_df["time_period"].max()]
-                res.append({
-                    "index": prediction.ds.dt.strftime("%Y-%m-%d").tolist(),
-                    "columns": [f"Prediksi {jenis_reg}"],
-                    "values": [prediction.yhat.tolist()]
-                })
+            prediction_pendapatan = predict(temp_df, periods=30, ds_col="time_period", y_col="total_tagihan")
+            prediction_pendapatan = prediction_pendapatan[prediction_pendapatan["ds"] >= temp_df["time_period"].max()]
+            prediction_pengeluaran = predict(temp_df, periods=30, ds_col="time_period", y_col="total_semua_hpp")
+            prediction_pengeluaran = prediction_pengeluaran[prediction_pengeluaran["ds"] >= temp_df["time_period"].max()]
+            res.append({
+                "index": prediction_pendapatan.ds.dt.strftime("%Y-%m-%d").tolist(),
+                "columns": [f"Prediksi Pendapatan"],
+                "values": [prediction_pendapatan.yhat.tolist()]
+            })
+            res.append({
+                "index": prediction_pengeluaran.ds.dt.strftime("%Y-%m-%d").tolist(),
+                "columns": [f"Prediksi Pengeluaran"],
+                "values": [prediction_pengeluaran.yhat.tolist()]
+            })
             return res
     return res
