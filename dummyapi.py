@@ -199,10 +199,10 @@ def los_rawatan():
     return 42
 
 def total_semua_hpp():
-    return 42
+    return random.randint(0, 4554293)
 
 def total_tagihan():
-    return 42
+    return random.randint(4000, 10327374)
 
 def tanggal_lahir(datetime_start):
     fmt = '%Y-%m-%d %H:%M:%S'
