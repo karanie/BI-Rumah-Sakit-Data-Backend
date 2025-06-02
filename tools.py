@@ -16,5 +16,7 @@ def get_last_waktu_regis():
         res_current_time = ds.execute(sqlalchemy.text("SELECT waktu_registrasi FROM dataset ORDER BY Waktu_registrasi DESC LIMIT 1;")).first()
     except Exception as e:
         return None
+    if not res_current_time:
+        return None
     current_datetime = res_current_time[0].strftime("%Y-%m-%d %H:%M:%S")
     return current_datetime

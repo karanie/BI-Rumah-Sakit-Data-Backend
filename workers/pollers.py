@@ -1,4 +1,5 @@
 import time
+import datetime
 import requests
 from sources.api import SourceAPI
 from computes.preprocess import PreprocessPolars
@@ -23,7 +24,7 @@ class APISourcePollers(Pollers):
         def callback():
             try:
                 s = SourceAPI()
-                last_w = get_last_waktu_regis()
+                last_w = get_last_waktu_regis() or datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 df = s.fetch(url, params={"datetime_start": last_w})
                 if not df.is_empty():
                     pre = PreprocessPolars()
