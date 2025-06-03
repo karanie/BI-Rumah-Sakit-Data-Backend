@@ -6,4 +6,4 @@ DATASTORE_FILE_PATH = os.path.join(os.getcwd(), os.environ.get("DATASTORE_FILE_P
 UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", "data/dataset/uploaded/")
 DB_TABLE = os.environ.get("DB_TABLE", "dataset")
 DB_CONNECTION = os.environ.get("DB_CONNECTION", "sqlite://")
-PORT = os.environ.get("PORT", "5000")
+PORT = int(os.environ.get("PORT", "5000"))
