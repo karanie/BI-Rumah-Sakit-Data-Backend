@@ -3,11 +3,11 @@ import config
 
 def app_flask():
     from app.flaskapp import app
-    app.run(host="0.0.0.0")
+    app.run(host="0.0.0.0", port=config.PORT)
 
 def app_fastapi():
     import uvicorn
-    uvicorn.run("app.fastapi:app", host="0.0.0.0", port=5001, log_level="info")
+    uvicorn.run("app.fastapi:app", host="0.0.0.0", port=config.PORT, log_level="info")
 
 def start_api_pollers():
     print("STARTING API POLLERS..")
