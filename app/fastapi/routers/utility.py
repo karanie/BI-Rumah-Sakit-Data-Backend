@@ -13,8 +13,6 @@ router = APIRouter()
 @router.get("/api/last-update")
 async def last_update():
     res = {}
-    res["mtime"] = os.path.getmtime(config.DATASTORE_FILE_PATH)
-    res["mtimeLocaltime"] = time.ctime(os.path.getmtime(config.DATASTORE_FILE_PATH))
 
     # Get latest waktu_registrasi in table
     res_current_time = ds.execute(sqlalchemy.text("SELECT waktu_registrasi FROM dataset ORDER BY Waktu_registrasi DESC LIMIT 1;")).first()
