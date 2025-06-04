@@ -12,7 +12,7 @@ def app_fastapi():
 def start_api_pollers():
     print("STARTING API POLLERS..")
     import workers.pollers
-    poller = workers.pollers.APISourcePollers(f"http://127.0.0.1:8000/api/data/dummy", timing=10)
+    poller = workers.pollers.APISourcePollers(config.API_TO_POLL, timing=10)
     poller.run()
 
 def init_datastore_dbms():
