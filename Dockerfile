@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenblas-dev \
     && rm -rf /var/lib/apt/lists/*
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-COPY pyproject.toml uv.lock .
+COPY pyproject.toml uv.lock ./
 RUN sh -c 'uv sync --extra fastapi --extra psql'
 COPY . .
 CMD ["./run.sh" ]
