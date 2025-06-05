@@ -79,47 +79,58 @@ name = "bi-rumah-sakit-data-backend"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "adbc-driver-postgresql" },
-    { name = "adbc-driver-sqlite" },
     { name = "connectorx" },
-    { name = "fastapi" },
-    { name = "flask" },
-    { name = "flask-caching" },
-    { name = "flask-cors" },
     { name = "numpy" },
     { name = "openpyxl" },
     { name = "pandas" },
     { name = "pgzip" },
     { name = "polars" },
     { name = "prophet" },
-    { name = "psycopg2-binary" },
     { name = "pyarrow" },
     { name = "requests" },
     { name = "sqlalchemy" },
+]
+
+[package.optional-dependencies]
+fastapi = [
+    { name = "fastapi" },
     { name = "uvicorn", extra = ["standard"] },
+]
+flask = [
+    { name = "flask" },
+    { name = "flask-caching" },
+    { name = "flask-cors" },
+]
+psql = [
+    { name = "adbc-driver-postgresql" },
+    { name = "psycopg2-binary" },
+]
+sqlite = [
+    { name = "adbc-driver-sqlite" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "adbc-driver-postgresql", specifier = ">=1.6.0" },
-    { name = "adbc-driver-sqlite", specifier = ">=1.6.0" },
+    { name = "adbc-driver-postgresql", marker = "extra == 'psql'", specifier = ">=1.6.0" },
+    { name = "adbc-driver-sqlite", marker = "extra == 'sqlite'", specifier = ">=1.6.0" },
     { name = "connectorx", specifier = ">=0.4.3" },
-    { name = "fastapi", specifier = ">=0.115.12" },
-    { name = "flask", specifier = ">=3.1.0" },
-    { name = "flask-caching", specifier = ">=2.3.1" },
-    { name = "flask-cors", specifier = ">=5.0.1" },
+    { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.115.12" },
+    { name = "flask", marker = "extra == 'flask'", specifier = ">=3.1.0" },
+    { name = "flask-caching", marker = "extra == 'flask'", specifier = ">=2.3.1" },
+    { name = "flask-cors", marker = "extra == 'flask'", specifier = ">=5.0.1" },
     { name = "numpy", specifier = ">=2.2.5" },
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "pgzip", specifier = ">=0.3.5" },
     { name = "polars", specifier = ">=1.29.0" },
     { name = "prophet", specifier = ">=1.1.6" },
-    { name = "psycopg2-binary", specifier = ">=2.9.10" },
+    { name = "psycopg2-binary", marker = "extra == 'psql'", specifier = ">=2.9.10" },
     { name = "pyarrow", specifier = ">=20.0.0" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "sqlalchemy", specifier = ">=2.0.40" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.34.2" },
+    { name = "uvicorn", extras = ["standard"], marker = "extra == 'fastapi'", specifier = ">=0.34.2" },
 ]
+provides-extras = ["flask", "fastapi", "psql", "sqlite"]
 
 [[package]]
 name = "blinker"
