@@ -1,5 +1,6 @@
-FROM python:3.13-bookworm AS build
-ENV PATH="/root/.local/bin:${PATH}"
+FROM ghcr.io/astral-sh/uv:bookworm AS build
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_NO_CACHE=1
 WORKDIR /code
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -8,8 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     libopenblas-dev \
     && rm -rf /var/lib/apt/lists/*
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 COPY pyproject.toml uv.lock ./
-RUN sh -c 'uv sync --extra fastapi --extra psql'
+RUN uv sync --extra fastapi --extra psql
 COPY . .
+
+FROM build AS production
+WORKDIR /code
+COPY --from=build /code/ ./
+RUN chmod +x ./run.sh
 CMD ["./run.sh" ]
