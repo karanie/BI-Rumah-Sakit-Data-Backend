@@ -1,14 +1,15 @@
+import random
 from tools import measure_time
 import sources.file
 import datastore.rdbms
 import datastore.parquet
 import config
 
-def test_read_time():
+def t_test_read_time(tmp_path, dataset_files):
     s_pl = sources.file.SourceFile(backend="polars")
     s_pd = sources.file.SourceFile(backend="pandas")
-    t_read_csv_pl, _ = measure_time(lambda: s_pl.read_dataset(config.INIT_SOURCE_PATH))
-    t_read_csv_pd, _ = measure_time(lambda: s_pd.read_dataset(config.INIT_SOURCE_PATH))
+    t_read_csv_pl, _ = measure_time(lambda: s_pl.read_dataset(str(ds_csv_file)))
+    t_read_csv_pd, _ = measure_time(lambda: s_pd.read_dataset(str(ds_csv_file)))
     print(f"# CSV Read time")
     print(f"t_read_csv_pd: {t_read_csv_pd}")
     print(f"t_read_csv_pl: {t_read_csv_pl}")
@@ -16,15 +17,15 @@ def test_read_time():
 
     dt_pd = datastore.parquet.DatastoreParquet(backend="pandas")
     dt_pl = datastore.parquet.DatastoreParquet(backend="polars")
-    t_read_parquet_pd, _ = measure_time(lambda: dt_pd.read_parquet("./dataset.parquet"))
-    t_read_parquet_pl, _ = measure_time(lambda: dt_pl.read_parquet("./dataset.parquet"))
+    t_read_parquet_pd, _ = measure_time(lambda: dt_pd.read_parquet(ds_parquet_file))
+    t_read_parquet_pl, _ = measure_time(lambda: dt_pl.read_parquet(str(ds_parquet_file)))
     print(f"# Parquet Read time")
     print(f"t_read_parquet_pd: {t_read_parquet_pd}")
     print(f"t_read_parquet_pl: {t_read_parquet_pl}")
     print()
 
-    dt_pd = datastore.rdbms.DatastoreDB(backend="pandas")
-    dt_pl = datastore.rdbms.DatastoreDB(backend="polars")
+    dt_pd = datastore.rdbms.DatastoreDB(backend="pandas", connection=config.DB_CONNECTION)
+    dt_pl = datastore.rdbms.DatastoreDB(backend="polars", connection=config.DB_CONNECTION)
     t_read_sql_pd, _ = measure_time(lambda: dt_pd.read_database("SELECT * FROM dataset"))
     t_read_sql_pl_sqlalchemy, _ = measure_time(lambda: dt_pl.read_database("SELECT * FROM dataset"))
     t_read_sql_pl_connectorx, _ = measure_time(lambda: dt_pl._pl_read_database("SELECT * FROM dataset", engine="connectorx"))
