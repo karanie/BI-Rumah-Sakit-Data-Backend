@@ -100,8 +100,10 @@ class SourceFile():
     def read_dataset(self, path):
         if self.backend == "pandas":
             return self._pandas_read_dataset(path)
-        if self.backend == "polars":
+        elif self.backend == "polars":
             return self._polars_read_dataset(path)
+        else:
+            raise Exception(f"Unsupported backend: {self.backend}")
 
 def read_dataset(path, backend="pandas"):
     s = SourceFile(backend=backend)
