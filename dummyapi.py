@@ -254,6 +254,30 @@ columns = {
     "kategori_usia": kategori_usia
 }
 
+def generate_dataset(datetime_start: str | None = None, res_len=1):
+    fmt = '%Y-%m-%d %H:%M:%S'
+    _datetime_start_dt_type = datetime.datetime.strptime(datetime_start, fmt)
+    weekday = _datetime_start_dt_type.isoweekday()
+    is_sunday = weekday == 7
+
+    SUNDAY_MIN = round(50 / 12 * 2)
+    SUNDAY_MAX = round(70 / 12 * 2)
+    DEFAULT_MIN = round(400 / 12 * 2)
+    DEFAULT_MAX = round(550 / 12 * 2)
+
+    res = [ {} for i in range(res_len) ]
+    for i in range(res_len):
+        for k, v in columns.items():
+            if k == "waktu_registrasi" or k == "tanggal_lahir" or k == "tglPulang" or k == "jenis_registrasi":
+                if (datetime_start):
+                    dt_start = datetime_start
+                else:
+                    dt_start = datetime.datetime.fromtimestamp(time.time()).strftime(fmt)
+                res[i][k] = v(dt_start)
+            else:
+                res[i][k] = v()
+    return res
+
 @app.get("/api/data/dummy")
 def dummy(datetime_start: str | None = None):
     fmt = '%Y-%m-%d %H:%M:%S'
