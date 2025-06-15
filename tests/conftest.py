@@ -16,29 +16,52 @@ def datasets(tmp_path_factory):
 
     ds_parquet_file = tmp_root / "dataset.parquet"
     ds_pl.write_parquet(ds_parquet_file)
+
     ds_csv_file = tmp_root / "dataset.csv"
     ds_pl.write_csv(ds_csv_file)
+
+    ds_gzip_pickle_file = tmp_root / "dataset.pkl.gz"
+    ds.to_pickle(ds_gzip_pickle_file, compression="gzip")
+
+    ds_pickle_file = tmp_root / "dataset.pkl"
+    ds.to_pickle(ds_pickle_file)
 
     sqlite_conn = "sqlite:///" + str(tmp_root / "dataset.db")
     ds_pl.write_database("dataset", sqlite_conn)
 
     print("Test dataset generated")
 
-    return [ str(ds_parquet_file), str(ds_csv_file), sqlite_conn ]
+    return [
+        str(ds_parquet_file),
+        str(ds_csv_file),
+        str(ds_gzip_pickle_file),
+        str(ds_pickle_file),
+        sqlite_conn
+    ]
 
 @pytest.fixture(scope="session")
 def dataset_file_parquet(datasets):
-    ds_parquet_file, ds_csv_file, sqlite_conn = datasets
+    ds_parquet_file, ds_csv_file, ds_gzip_pickle_file, ds_pickle_file, sqlite_conn = datasets
     return ds_parquet_file
 
 @pytest.fixture(scope="session")
 def dataset_file_csv(datasets):
-    ds_parquet_file, ds_csv_file, sqlite_conn = datasets
+    ds_parquet_file, ds_csv_file, ds_gzip_pickle_file, ds_pickle_file, sqlite_conn = datasets
     return ds_csv_file
 
 @pytest.fixture(scope="session")
+def dataset_file_pickle_gzip(datasets):
+    ds_parquet_file, ds_csv_file, ds_gzip_pickle_file, ds_pickle_file, sqlite_conn = datasets
+    return ds_gzip_pickle_file
+
+@pytest.fixture(scope="session")
+def dataset_file_pickle(datasets):
+    ds_parquet_file, ds_csv_file, ds_gzip_pickle_file, ds_pickle_file, sqlite_conn = datasets
+    return ds_pickle_file
+
+@pytest.fixture(scope="session")
 def dataset_sqlite_conn(datasets):
-    ds_parquet_file, ds_csv_file, sqlite_conn = datasets
+    ds_parquet_file, ds_csv_file, ds_gzip_pickle_file, ds_pickle_file, sqlite_conn = datasets
     return sqlite_conn
 
 @pytest.fixture(scope="session")
