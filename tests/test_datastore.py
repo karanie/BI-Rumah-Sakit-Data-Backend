@@ -17,17 +17,15 @@ def test_datastore_read_parquet_pandas(dataset_file_parquet):
     df = dt.read_parquet(dataset_file_parquet)
     assert type(df) == pd.DataFrame
 
-def test_datastore_write_parquet_polars(tmp_path):
-    df = pl.DataFrame({"a": [1,2,3], "b": ['x','y','z']})
+def test_datastore_write_parquet_polars(tmp_path, test_pl_df):
     path = tmp_path / "test_write_parquet_polars.parquet"
     dt = datastore.parquet.DatastoreParquet(backend="polars")
-    dt.write_parquet(df, path)
+    dt.write_parquet(test_pl_df, path)
 
-def test_datastore_write_parquet_pandas(tmp_path):
-    df = pd.DataFrame({"a": [1,2,3], "b": ['x','y','z']})
+def test_datastore_write_parquet_pandas(tmp_path, test_pd_df):
     path = tmp_path / "test_write_parquet_pandas.parquet"
     dt = datastore.parquet.DatastoreParquet(backend="pandas")
-    dt.write_parquet(df, path)
+    dt.write_parquet(test_pd_df, path)
 
 def test_datastore_file_pickle(dataset_file_pickle):
     df = datastore.file.read_pickle(dataset_file_pickle)
@@ -69,7 +67,7 @@ def test_datastore_rdbms_read_polars_connectorx(dataset_sqlite_conn):
     df = ds.read_database("select * from dataset limit 1", engine="connectorx")
     assert type(df) == pl.DataFrame
 
-def test_datastore_rdbms_write_adbc(dataset_sqlite_conn):
+def test_datastore_rdbms_write_adbc(dataset_sqlite_conn, test_pl_df):
     from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData
 
     engine = create_engine(dataset_sqlite_conn)
@@ -81,11 +79,10 @@ def test_datastore_rdbms_write_adbc(dataset_sqlite_conn):
     )
     meta.create_all(engine)
 
-    df = pl.DataFrame({"a": [1,2,3], "b": ['x','y','z']})
     ds = datastore.rdbms.DatastoreDB(backend="polars", connection=dataset_sqlite_conn)
-    ds.write_database(df, db_table="dataset_test_write_adbc")
+    ds.write_database(test_pl_df, db_table="dataset_test_write_adbc")
 
-def test_datastore_rdbms_write_sqlalchemy(dataset_sqlite_conn):
+def test_datastore_rdbms_write_sqlalchemy(dataset_sqlite_conn, test_pl_df):
     from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData
 
     engine = create_engine(dataset_sqlite_conn)
@@ -97,6 +94,5 @@ def test_datastore_rdbms_write_sqlalchemy(dataset_sqlite_conn):
     )
     meta.create_all(engine)
 
-    df = pl.DataFrame({"a": [1,2,3], "b": ['x','y','z']})
     ds = datastore.rdbms.DatastoreDB(backend="polars", connection=dataset_sqlite_conn)
-    ds.write_database(df, db_table="dataset_test_write_sqlalchemy", engine="sqlalchemy")
+    ds.write_database(test_pl_df, db_table="dataset_test_write_sqlalchemy", engine="sqlalchemy")
