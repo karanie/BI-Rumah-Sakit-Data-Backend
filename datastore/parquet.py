@@ -27,6 +27,6 @@ class DatastoreParquet():
 
     def write_parquet(self, df, path):
         if self.backend == "pandas":
-            return self._pd_read_parquet(df, path)
+            return self._pd_write_parquet(df, path)
         if self.backend == "polars":
-            return self._pl_read_parquet(df, path)
+            return self._pl_write_parquet(df, path)
