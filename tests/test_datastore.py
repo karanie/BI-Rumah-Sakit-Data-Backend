@@ -58,3 +58,45 @@ def test_datastore_file_save_as_pickle(tmp_path):
         assert type(read_obj) == dict
         assert list(df.keys()) == ["foo"]
         assert list(df.values()) == ["bar"]
+
+def test_datastore_rdbms_read_polars_sqlalchemy(dataset_sqlite_conn):
+    ds = datastore.rdbms.DatastoreDB(backend="polars", connection=dataset_sqlite_conn)
+    df = ds.read_database("select * from dataset limit 1")
+    assert type(df) == pl.DataFrame
+
+def test_datastore_rdbms_read_polars_connectorx(dataset_sqlite_conn):
+    ds = datastore.rdbms.DatastoreDB(backend="polars", connection=dataset_sqlite_conn)
+    df = ds.read_database("select * from dataset limit 1", engine="connectorx")
+    assert type(df) == pl.DataFrame
+
+def test_datastore_rdbms_write_adbc(dataset_sqlite_conn):
+    from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData
+
+    engine = create_engine(dataset_sqlite_conn)
+    meta = MetaData()
+    dataset_test_write = Table(
+       'dataset_test_write_adbc', meta,
+       Column('a', Integer, primary_key = True),
+       Column('b', String),
+    )
+    meta.create_all(engine)
+
+    df = pl.DataFrame({"a": [1,2,3], "b": ['x','y','z']})
+    ds = datastore.rdbms.DatastoreDB(backend="polars", connection=dataset_sqlite_conn)
+    ds.write_database(df, db_table="dataset_test_write_adbc")
+
+def test_datastore_rdbms_write_sqlalchemy(dataset_sqlite_conn):
+    from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData
+
+    engine = create_engine(dataset_sqlite_conn)
+    meta = MetaData()
+    dataset_test_write = Table(
+       'dataset_test_write_sqlalchemy', meta,
+       Column('a', Integer, primary_key = True),
+       Column('b', String),
+    )
+    meta.create_all(engine)
+
+    df = pl.DataFrame({"a": [1,2,3], "b": ['x','y','z']})
+    ds = datastore.rdbms.DatastoreDB(backend="polars", connection=dataset_sqlite_conn)
+    ds.write_database(df, db_table="dataset_test_write_sqlalchemy", engine="sqlalchemy")
