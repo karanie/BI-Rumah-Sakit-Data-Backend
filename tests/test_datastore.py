@@ -7,15 +7,27 @@ import datastore.rdbms
 import datastore.parquet
 import datastore.file
 
-def test_datastore_parquet_polars(dataset_file_parquet):
+def test_datastore_read_parquet_polars(dataset_file_parquet):
     dt = datastore.parquet.DatastoreParquet(backend="polars")
     df = dt.read_parquet(dataset_file_parquet)
     assert type(df) == pl.DataFrame
 
-def test_datastore_parquet_pandas(dataset_file_parquet):
+def test_datastore_read_parquet_pandas(dataset_file_parquet):
     dt = datastore.parquet.DatastoreParquet(backend="pandas")
     df = dt.read_parquet(dataset_file_parquet)
     assert type(df) == pd.DataFrame
+
+def test_datastore_write_parquet_polars(tmp_path):
+    df = pl.DataFrame({"a": [1,2,3], "b": ['x','y','z']})
+    path = tmp_path / "test_write_parquet_polars.parquet"
+    dt = datastore.parquet.DatastoreParquet(backend="polars")
+    dt.write_parquet(df, path)
+
+def test_datastore_write_parquet_pandas(tmp_path):
+    df = pd.DataFrame({"a": [1,2,3], "b": ['x','y','z']})
+    path = tmp_path / "test_write_parquet_pandas.parquet"
+    dt = datastore.parquet.DatastoreParquet(backend="pandas")
+    dt.write_parquet(df, path)
 
 def test_datastore_file_pickle(dataset_file_pickle):
     df = datastore.file.read_pickle(dataset_file_pickle)
