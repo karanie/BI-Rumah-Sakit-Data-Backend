@@ -58,9 +58,10 @@ class DatastoreDB():
         self,
         query=f"SELECT * FROM {config.DB_TABLE}",
         execute_options=None,
+        engine="sqlalchemy",
     ):
         if self.backend == "polars":
-            return self._pl_read_database(query=query, execute_options=execute_options)
+            return self._pl_read_database(query=query, execute_options=execute_options, engine=engine)
         if self.backend == "pandas":
             return Exception(f"Not supported anymore. Please use Polars.")
         raise Exception(f"{self.backend} is not available")
@@ -73,7 +74,7 @@ class DatastoreDB():
         engine="adbc"
     ):
         if self.backend == "polars":
-            return self._pl_write_database(df=df, engine=engine, if_table_exists=if_table_exists)
+            return self._pl_write_database(df=df, db_table=db_table, engine=engine, if_table_exists=if_table_exists)
         if self.backend == "pandas":
             return Exception(f"Not supported anymore. Please use Polars.")
         raise Exception(f"{self.backend} is not available")
