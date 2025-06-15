@@ -1,4 +1,6 @@
 import pytest
+import polars as pl
+import pandas as pd
 import dummyapi
 import datastore.rdbms
 
@@ -79,3 +81,13 @@ def dummyapi_server():
     assert not server.poll(), server.stdout.read().decode("utf-8")
     yield server
     server.terminate()
+
+@pytest.fixture(scope="session")
+def test_pl_df():
+    df = pl.DataFrame({"a": [1,2,3], "b": ['x','y','z']})
+    return df
+
+@pytest.fixture(scope="session")
+def test_pd_df():
+    df = pd.DataFrame({"a": [1,2,3], "b": ['x','y','z']})
+    return df
