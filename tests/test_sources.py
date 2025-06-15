@@ -17,6 +17,12 @@ def test_sources_polars_file_csv(dataset_file_csv):
 def test_sources_pandas_file_csv(dataset_file_csv):
     execute("pandas", dataset_file_csv)
 
+def test_sources_unsupported_backend(dataset_file_csv):
+    try:
+        execute("lorem ipsum", dataset_file_csv)
+    except Exception as e:
+        assert str(e) == "Unsupported backend: lorem ipsum"
+
 def test_sources_api_object(dummyapi_server):
     import sources.api
     s = sources.api.SourceAPI(backend="object")
