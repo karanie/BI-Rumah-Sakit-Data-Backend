@@ -1,18 +1,20 @@
 import pytest
+import numpy as np
 import polars as pl
 import pandas as pd
 import dummyapi
 import datastore.rdbms
 
 @pytest.fixture(scope="session")
-def datasets(tmp_path_factory):
-    print("Generating test dataset")
-
+def test_df_dummy():
     generated_ds = dummyapi.generate_dataset("2025-01-01 00:00:00", 10000)
-    import pandas as pd
-    import polars as pl
-    ds = pd.DataFrame(generated_ds)
-    ds_pl = pl.from_pandas(ds)
+    ds_pd = pd.DataFrame(generated_ds)
+    ds_pl = pl.from_pandas(ds_pd)
+    return [ ds_pl, ds_pd ]
+
+@pytest.fixture(scope="session")
+def datasets(tmp_path_factory, test_df_dummy):
+    ds_pl, ds = test_df_dummy
 
     tmp_root = tmp_path_factory.mktemp("data")
 
@@ -30,8 +32,6 @@ def datasets(tmp_path_factory):
 
     sqlite_conn = "sqlite:///" + str(tmp_root / "dataset.db")
     ds_pl.write_database("dataset", sqlite_conn)
-
-    print("Test dataset generated")
 
     return [
         str(ds_parquet_file),
