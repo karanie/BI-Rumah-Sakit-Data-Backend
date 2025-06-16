@@ -91,3 +91,13 @@ def test_pl_df():
 def test_pd_df():
     df = pd.DataFrame({"a": [1,2,3], "b": ['x','y','z']})
     return df
+
+@pytest.fixture(scope="session")
+def test_df_seasonal():
+    ds = pd.date_range(start='2025-01-01', periods=100)
+    x = np.linspace(0, 1, 100)
+    y = np.sin(20 * x)
+    y = y + np.random.rand(100) * 0.05
+    ds_pd = pd.DataFrame({ "ds": ds, "x": x, "y": y })
+    ds_pl = pl.from_pandas(ds_pd)
+    return [ ds_pl, ds_pd ]
