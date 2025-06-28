@@ -3,6 +3,7 @@ name = "bi-rumah-sakit-data-backend"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
+    "bayesian-optimization>=3.0.0",
     "connectorx>=0.4.3",
     "coverage>=7.9.1",
     "numpy>=2.2.5",
@@ -15,6 +16,7 @@ dependencies = [
     "pytest>=8.4.0",
     "requests>=2.32.3",
     "sqlalchemy>=2.0.40",
+    "statsmodels>=0.14.4",
 ]
 
 [project.optional-dependencies]
