@@ -178,16 +178,29 @@ async def get_kunjungan(
             res["columns"] = [col for col in pivot_df.columns if col != "time_period"]
             res["values"] = [pivot_df[col].to_list() for col in res["columns"]]
         else:
-            from computes.prophet import predict
             res = []
+
+            import pandas as pd
+            from computes.timeseries_analysis import bayesian_optimization_arima_orders, build_arima_model
+            from statsmodels.tsa.arima.model import ARIMA
+
+            best_order = None
+
             for jenis_reg in temp_df["jenis_registrasi"].unique():
                 t_df = temp_df.filter(pl.col("jenis_registrasi") == jenis_reg)
-                prediction = predict(t_df, periods=30, ds_col="time_period", y_col="count")
-                prediction = prediction[prediction["ds"] >= t_df["time_period"].max()]
+
+                if best_order == None:
+                    best_order = bayesian_optimization_arima_orders(t_df, "time_period", "count")
+                    print(best_order)
+
+                model, _ = build_arima_model(pd.Series(t_df["count"], index=t_df["time_period"]), int(best_order[0]), int(best_order[1]), int(best_order[2]))
+                prediction = model.forecast(steps=30)
+                index = pd.date_range(start=t_df["time_period"][-1], periods=30, freq='D')
+
                 res.append({
-                    "index": prediction.ds.dt.strftime("%Y-%m-%d").tolist(),
+                    "index": index.strftime("%Y-%m-%d").tolist(),
                     "columns": [f"Prediksi {jenis_reg}"],
-                    "values": [prediction.yhat.tolist()]
+                    "values": [prediction.values.tolist()]
                 })
             return res
 

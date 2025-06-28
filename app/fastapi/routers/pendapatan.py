@@ -106,16 +106,28 @@ async def get_pendapatan(
             res["columns"] = [col for col in pivot_df.columns if col != "time_period"]
             res["values"] = [pivot_df[col].fill_null(0).to_list() for col in res["columns"]]
         else:
-            from computes.prophet import predict
             res = []
+
+            import pandas as pd
+            from computes.timeseries_analysis import bayesian_optimization_arima_orders, build_arima_model
+            from statsmodels.tsa.arima.model import ARIMA
+
+            best_order = None
+
             for jenis_reg in temp_df["jenis_registrasi"].unique():
                 t_df = temp_df.filter(pl.col("jenis_registrasi") == jenis_reg)
-                prediction = predict(t_df, periods=30, ds_col="time_period", y_col="total")
-                prediction = prediction[prediction["ds"] >= t_df["time_period"].max()]
+
+                if best_order == None:
+                    best_order = bayesian_optimization_arima_orders(t_df, "time_period", "total")
+
+                model, _ = build_arima_model(pd.Series(t_df["total"], index=t_df["time_period"]), int(best_order[0]), int(best_order[1]), int(best_order[2]))
+                prediction = model.forecast(steps=30)
+                index = pd.date_range(start=t_df["time_period"][-1], periods=30, freq='D')
+
                 res.append({
-                    "index": prediction.ds.dt.strftime("%Y-%m-%d").tolist(),
+                    "index": index.strftime("%Y-%m-%d").tolist(),
                     "columns": [f"Prediksi {jenis_reg}"],
-                    "values": [prediction.yhat.tolist()]
+                    "values": [prediction.values.tolist()]
                 })
             return res
 
@@ -470,21 +482,29 @@ async def get_pendapatan(
                 temp_df["total_semua_hpp"].to_list()
             ]
         else:
-            from computes.prophet import predict
             res = []
-            prediction_pendapatan = predict(temp_df, periods=30, ds_col="time_period", y_col="total_tagihan")
-            prediction_pendapatan = prediction_pendapatan[prediction_pendapatan["ds"] >= temp_df["time_period"].max()]
-            prediction_pengeluaran = predict(temp_df, periods=30, ds_col="time_period", y_col="total_semua_hpp")
-            prediction_pengeluaran = prediction_pengeluaran[prediction_pengeluaran["ds"] >= temp_df["time_period"].max()]
+
+            import pandas as pd
+            from computes.timeseries_analysis import bayesian_optimization_arima_orders, build_arima_model
+            from statsmodels.tsa.arima.model import ARIMA
+
+            best_order = bayesian_optimization_arima_orders(temp_df, "time_period", "total_tagihan")
+
+            model, _ = build_arima_model(pd.Series(temp_df["total_tagihan"], index=temp_df["time_period"]), int(best_order[0]), int(best_order[1]), int(best_order[2]))
+            index = pd.date_range(start=temp_df["time_period"][-1], periods=30, freq='D')
+            prediction = model.forecast(steps=30)
             res.append({
-                "index": prediction_pendapatan.ds.dt.strftime("%Y-%m-%d").tolist(),
+                "index": index.strftime("%Y-%m-%d").tolist(),
                 "columns": [f"Prediksi Pendapatan"],
-                "values": [prediction_pendapatan.yhat.tolist()]
+                "values": [prediction.values.tolist()]
             })
+
+            model, _ = build_arima_model(pd.Series(temp_df["total_semua_hpp"], index=temp_df["time_period"]), int(best_order[0]), int(best_order[1]), int(best_order[2]))
+            prediction = model.forecast(steps=30)
             res.append({
-                "index": prediction_pengeluaran.ds.dt.strftime("%Y-%m-%d").tolist(),
+                "index": index.strftime("%Y-%m-%d").tolist(),
                 "columns": [f"Prediksi Pengeluaran"],
-                "values": [prediction_pengeluaran.yhat.tolist()]
+                "values": [prediction.values.tolist()]
             })
             return res
     return res
