@@ -29,7 +29,6 @@ class APISourcePollers(Pollers):
                 if not df.is_empty():
                     pre = PreprocessPolars()
                     df = pre.preprocess_dataset(df)
-                    df.write_parquet("dataset.parquet")
                     df = pre.convert_dtypes(df)
                     ds.write_database(df, engine="adbc")
             except requests.exceptions.ConnectionError as e:
